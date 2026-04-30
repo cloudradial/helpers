@@ -1,0 +1,4 @@
+email,firstName,lastName,userName,department,title,phoneNumber
+john.smith@contoso.com,John,Smith,john.smith,IT,Systems Administrator,555-0101
+jane.doe@contoso.com,Jane,Doe,jane.doe,Finance,CFO,555-0102
+bob.wilson@contoso.com,Bob,Wilson,bob.wilson,Operations,Help Desk Technician,555-0103
