@@ -1,8 +1,21 @@
-# Create EndpointNames Token — Dynamic Endpoint Lists in Portal Content
+# Create Device Name Tokens — Dynamic Endpoint and Server Lists for Portal Forms
 
-## The Problem
+## Why This Matters
 
-CloudRadial tokens let you display dynamic data in portal content and forms. The @EndpointNames token gives your end users a dropdown or reference list of their company's active endpoints—useful for ticket forms ("Which computer is this about?"), reporting, dashboards, and self-service workflows. Without this script, you'd have to manually maintain and update hostname lists for each company every time their endpoint inventory changes.
+CloudRadial tracks endpoints and servers in the portal through the Data Agent and the Datto RMM integration. That device data is there — but it isn't available as a dropdown or multi-select list in ticket and service request forms. So when an end user needs to submit a request like "I'd like software installed on this machine" or "I'd like to order a license for this device," there's no way for them to pick from their actual devices. They're left typing free-text — misspelled hostnames, vague descriptions like "my laptop," or just leaving it blank.
+
+This script bridges that gap. It pulls a company's active device names — either endpoints or servers, controlled by the `-DeviceType` flag — and stores them as a comma-separated value in a company-level token. CloudRadial forms treat comma-separated token values as individual answer options, so once the token exists, any multi-select or multi-choice question in any form — whether it's part of a Question Template or a standalone ticket form — can use it as an answer source. End users see a clean list of their own devices and pick from it.
+
+The script creates @EndpointNames when run for endpoints (the default) and @ServerNames when run for servers. Run both to give your forms access to the full device inventory. Because tokens are company-level, each company's forms automatically show only their own devices. Run the script on a schedule and the lists stay current — new machines appear, decommissioned ones disappear, no manual maintenance required.
+
+> **Coming soon:** A separate script for Flexible Asset tokens is planned as a future addition to this folder.
+
+## Who This Is For
+
+- **Partners building ticket and request forms** — "Which device is this about?" becomes a real dropdown instead of a free-text field. Works in any form type: tickets, service requests, change requests, onboarding forms.
+- **Partners who already have device data flowing into CloudRadial** — Whether it comes from the Data Agent or the Datto RMM integration, this script takes data you already have and makes it usable in forms.
+- **Partners managing multiple clients** — Run it with `-AllCompanies` and every client company gets updated device lists in one pass. No per-company maintenance.
+- **Partners reducing ticket triage time** — When the exact device name is captured at submission, dispatch and triage workflows get structured data instead of guesswork.
 
 ## What You'll Need
 
@@ -12,14 +25,16 @@ CloudRadial tokens let you display dynamic data in portal content and forms. The
 
 ## How Tokens Work
 
-Tokens are dynamic @name placeholders that resolve to specific values for each company. This script:
+Tokens are dynamic @name placeholders that resolve to specific values per company. When a token's value is comma-separated, CloudRadial's multi-select and multi-choice question types treat each comma-separated item as an individual answer option.
 
-1. Reads your active endpoint inventory from CloudRadial
-2. Extracts hostnames (computer names) from each endpoint
-3. Creates a comma-separated value and stores it as the @EndpointNames token
-4. The portal then displays these hostnames in forms and content for that company
+This script:
 
-Every time you run the script, the token updates to reflect your current endpoints—new machines appear in dropdowns, removed machines disappear.
+1. Queries a company's active device inventory from CloudRadial (endpoints or servers, based on `-DeviceType`)
+2. Extracts the device names (preferring machineName, falling back to name) from each device
+3. Deduplicates and sorts the names, then stores them as a single comma-separated value in a company-level token
+4. Any form question that references the token (e.g., @EndpointNames or @ServerNames) now shows those devices as selectable options
+
+Because the token is set at the company level, each company's forms display only their own devices. Run the script again any time — it overwrites the token with the current device list, so the form options stay in sync with the actual inventory.
 
 ## Step 1: Set Your Credentials
 
@@ -41,29 +56,47 @@ If the environment variables are not set, the script will prompt you to enter th
 
 ## Step 2: Create Token for One Company
 
-To create the @EndpointNames token for a single company, use either company ID or company name:
+By default, the script queries endpoints and creates the @EndpointNames token. Use `-DeviceType Server` to query servers and create @ServerNames instead.
 
-**By Company ID:**
+**Endpoints (default):**
 ```powershell
 .\New-EndpointNamesToken.ps1 -CompanyId 42
 ```
 
-**By Company Name:**
+**Servers:**
+```powershell
+.\New-EndpointNamesToken.ps1 -DeviceType Server -CompanyId 42
+```
+
+**By Company Name (works with either device type):**
 ```powershell
 .\New-EndpointNamesToken.ps1 -CompanyName "Contoso"
+.\New-EndpointNamesToken.ps1 -DeviceType Server -CompanyName "Contoso"
 ```
 
 If your company name search returns multiple matches, the script will show you a menu to select the correct company.
 
 ## Step 3: Create Tokens for All Companies
 
-To create @EndpointNames tokens for every company in your workspace:
+To create tokens for every company in your workspace:
 
+**Endpoints:**
 ```powershell
 .\New-EndpointNamesToken.ps1 -AllCompanies
 ```
 
-By default, the script skips companies that have no active endpoints. If you want to create empty tokens for these companies (useful for consistency), add the -CreateEmptyTokens switch:
+**Servers:**
+```powershell
+.\New-EndpointNamesToken.ps1 -DeviceType Server -AllCompanies
+```
+
+**Both (run the script twice):**
+```powershell
+.\New-EndpointNamesToken.ps1 -AllCompanies
+.\New-EndpointNamesToken.ps1 -DeviceType Server -AllCompanies
+```
+
+By default, the script skips companies that have no active devices of the selected type. If you want to create empty tokens for these companies (useful for consistency), add the -CreateEmptyTokens switch:
 
 ```powershell
 .\New-EndpointNamesToken.ps1 -AllCompanies -CreateEmptyTokens
@@ -75,16 +108,21 @@ After running the script, verify that the tokens were created:
 
 1. Log in to CloudRadial as a Partner Admin
 2. Navigate to Settings > Tokens (or similar, depending on your UI version)
-3. Search for or filter by "EndpointNames"
-4. You should see one token per company, with hostnames listed as comma-separated values
+3. Search for "EndpointNames" or "ServerNames" (depending on which you created)
+4. You should see one token per company, with device names listed as comma-separated values
 
 ## Using the Token in Forms
 
-Once the @EndpointNames token is created, you can reference it in service catalog forms and portal content:
+Once a token exists for a company, any multi-select or multi-choice question can use it as its answer source. This works in Question Templates, standalone ticket forms, and service request forms — the token doesn't need to be tied to a Question Template to work.
 
-- **Service Catalog Form:** Add a dropdown field and set its data source to @EndpointNames. End users will see their company's endpoint list.
-- **Portal Content:** Use @EndpointNames in markdown or template syntax to display endpoints in knowledge base articles, dashboards, or ticket templates.
-- **Reports:** Reference the token in report filters or display logic to show only data for endpoints in the list.
+**Common form scenarios:**
+
+- "Which computer needs attention?" — Add a multi-choice question with @EndpointNames as the answer source. The end user picks their workstation from the list.
+- "Select the machines for software deployment" — Use a multi-select question so the user can choose multiple endpoints in one request.
+- "Which server should receive the update?" — Use @ServerNames as the answer source for server-specific requests.
+- "Which device should receive the new license?" — Use @EndpointNames or @ServerNames depending on whether the license applies to workstations or servers.
+
+You can also reference these tokens in portal content (knowledge base articles, dashboards) to display a company's device lists outside of forms.
 
 ## Scheduling This Script
 
@@ -94,11 +132,15 @@ To keep your tokens fresh as endpoints change, schedule the script to run regula
 1. Open Task Scheduler
 2. Create a new task
 3. Set the trigger (daily, weekly, or as needed)
-4. Set the action to run: `powershell.exe -File C:\path\to\New-EndpointNamesToken.ps1 -AllCompanies`
+4. Set the action to run both device types:
+   ```
+   powershell.exe -File C:\path\to\New-EndpointNamesToken.ps1 -AllCompanies
+   powershell.exe -File C:\path\to\New-EndpointNamesToken.ps1 -DeviceType Server -AllCompanies
+   ```
 5. Run with credentials that have the CLOUDRADIAL_API_USERNAME and CLOUDRADIAL_API_PASSWORD environment variables set
 
 **RMM/Automation Platform:**
-If you use ConnectWise Automate, Datto RMM, or similar, create a scheduled script task that runs the PowerShell script on your desired interval (e.g., daily or weekly).
+If you use ConnectWise Automate, Datto RMM, or similar, create a scheduled script task that runs the PowerShell script on your desired interval (e.g., daily or weekly). Schedule both device types if you want both tokens kept current.
 
 ## Customization Tips
 
@@ -109,13 +151,13 @@ If you want to use a different token name (e.g., @Computers or @MyEndpoints), pa
 .\New-EndpointNamesToken.ps1 -AllCompanies -TokenName "Computers"
 ```
 
-### Filter Endpoints Differently
-The script includes all active endpoints by default (isBlocked eq false). If you need different filtering logic—for example, excluding certain endpoint types, filtering by location, or applying custom business rules—edit the `Get-ActiveEndpoints` function to adjust the OData filter.
+### Filter Devices Differently
+The script includes all active devices by default (isBlocked eq false). If you need different filtering logic — for example, excluding certain device types, filtering by location, or applying custom business rules — edit the `Get-ActiveDevices` function to adjust the OData filter.
 
 ### Adapt with AI
 Use tools like GitHub Copilot or ChatGPT to help customize the script for your specific workflow, such as:
-- Excluding endpoints by name pattern (e.g., skip test machines)
-- Creating different tokens for different endpoint groups (e.g., @ProductionEndpoints, @TestEndpoints)
+- Excluding devices by name pattern (e.g., skip test machines)
+- Creating different tokens for device subsets (e.g., @ProductionServers, @TestEndpoints)
 - Adding logging or notifications when the script runs
 - Integrating with your RMM tool's API
 
@@ -131,9 +173,9 @@ Use tools like GitHub Copilot or ChatGPT to help customize the script for your s
 **"API returned 401"**
 - Your PublicKey or PrivateKey is incorrect. Verify credentials in Settings > API Keys.
 
-**Token created but hostnames are blank or incorrect**
-- Some endpoints may have missing or empty machineName and name fields. Check the Endpoints page in CloudRadial to see what data is available.
-- Edit the endpoint details to populate the machine name field.
+**Token created but device names are blank or incorrect**
+- Some devices may have missing or empty machineName and name fields. Check the Endpoints or Servers page in CloudRadial to see what data is available.
+- Edit the device details to populate the machine name field.
 
 **Script hangs or takes a long time**
-- For workspaces with thousands of endpoints, pagination takes time. This is normal. Monitor the output and be patient.
+- For workspaces with thousands of devices, pagination takes time. This is normal. Monitor the output and be patient.

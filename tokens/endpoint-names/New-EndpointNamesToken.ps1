@@ -1,18 +1,27 @@
 <#
 .SYNOPSIS
-Create or update @EndpointNames tokens for CloudRadial companies via the v2 API.
+Create or update device name tokens for CloudRadial companies via the v2 API.
 
 .DESCRIPTION
-Populates the @EndpointNames token with a comma-separated list of active endpoint hostnames
-for one or more CloudRadial companies. This token can be used in portal content, service catalog
-forms, and reports to dynamically display each company's computers.
+Populates a company-level token with a comma-separated list of active device names
+(endpoints or servers) for one or more CloudRadial companies. The token can be used as
+an answer source for multi-select and multi-choice questions in service catalog forms,
+ticket forms, and portal content.
 
-The script queries the CloudRadial endpoint inventory, extracts hostnames (preferring machineName,
-falling back to name), deduplicates and sorts them, then POSTs the comma-separated value to
-the token API.
+Use -DeviceType to choose between Endpoints and Servers. The default token name is set
+automatically based on the device type (@EndpointNames or @ServerNames), but can be
+overridden with -TokenName.
+
+The script queries the CloudRadial device inventory (populated by the Data Agent or
+Datto RMM integration), extracts device names (preferring machineName, falling back to
+name), deduplicates and sorts them, then POSTs the comma-separated value to the token API.
 
 Credentials are read from $env:CLOUDRADIAL_API_USERNAME and $env:CLOUDRADIAL_API_PASSWORD,
 with interactive fallback via Read-Host.
+
+.PARAMETER DeviceType
+(Optional) Type of device to query. Valid values: "Endpoint", "Server".
+Default: "Endpoint". Determines which API entity is queried and the default token name.
 
 .PARAMETER CompanyId
 (Optional) Integer company ID. If provided, creates token for that company only.
@@ -31,45 +40,65 @@ Mutually exclusive with -CompanyId and -CompanyName.
 (Optional) CloudRadial API base URL. Default: "https://api.us.cloudradial.com"
 
 .PARAMETER TokenName
-(Optional) Bare token name (no @ prefix) to create/update. Default: "EndpointNames"
+(Optional) Bare token name (no @ prefix) to create/update.
+Default: "EndpointNames" when DeviceType is Endpoint, "ServerNames" when DeviceType is Server.
 
 .PARAMETER CreateEmptyTokens
-(Optional) Switch. If enabled, creates tokens for companies with zero active endpoints
+(Optional) Switch. If enabled, creates tokens for companies with zero active devices
 (with empty value ""). Default behavior skips these companies.
 
 .PARAMETER MaxRetries
 (Optional) Maximum retry attempts for 429/5xx responses. Default: 3
 
 .EXAMPLE
-# Create token for a specific company by ID
+# Create @EndpointNames token for a specific company
 .\New-EndpointNamesToken.ps1 -CompanyId 42
 
 .EXAMPLE
-# Create token for a company by name (interactive selection if multiple matches)
-.\New-EndpointNamesToken.ps1 -CompanyName "Contoso"
+# Create @ServerNames token for a specific company
+.\New-EndpointNamesToken.ps1 -DeviceType Server -CompanyId 42
 
 .EXAMPLE
-# Create tokens for all companies in the workspace
+# Create @EndpointNames tokens for all companies
 .\New-EndpointNamesToken.ps1 -AllCompanies
 
 .EXAMPLE
-# Create tokens for all companies, including those with no endpoints
+# Create @ServerNames tokens for all companies
+.\New-EndpointNamesToken.ps1 -DeviceType Server -AllCompanies
+
+.EXAMPLE
+# Create token with a custom name for a company by name search
+.\New-EndpointNamesToken.ps1 -CompanyName "Contoso" -TokenName "Computers"
+
+.EXAMPLE
+# Create tokens for all companies, including those with no devices
 .\New-EndpointNamesToken.ps1 -AllCompanies -CreateEmptyTokens
 
 .NOTES
 Requires PowerShell 5.1 or later.
 API credentials must be set via environment variables or entered at runtime.
+Device data is sourced from the CloudRadial Data Agent or Datto RMM integration.
 #>
 
 param(
+    [ValidateSet("Endpoint", "Server")]
+    [string]$DeviceType = "Endpoint",
     [int]$CompanyId,
     [string]$CompanyName,
     [switch]$AllCompanies,
     [string]$BaseUri = "https://api.us.cloudradial.com",
-    [string]$TokenName = "EndpointNames",
+    [string]$TokenName,
     [switch]$CreateEmptyTokens,
     [int]$MaxRetries = 3
 )
+
+# Set default token name based on device type if not explicitly provided
+if (-not $TokenName) {
+    $TokenName = switch ($DeviceType) {
+        "Endpoint" { "EndpointNames" }
+        "Server"   { "ServerNames" }
+    }
+}
 
 #region Helper Functions
 
@@ -173,45 +202,53 @@ function Find-CompaniesByName {
     return $companies
 }
 
-function Get-ActiveEndpoints {
+function Get-ActiveDevices {
     param(
+        [string]$DeviceType,
         [int]$CompanyId,
         [string]$BaseUri,
         [string]$AuthHeader,
         [int]$MaxRetries
     )
 
-    $endpoints = @()
-    $nextLink = "$BaseUri/v2/odata/endpoint?\$filter=(companyId eq $CompanyId) and (isBlocked eq false)&\$select=companyEndpointId,companyId,machineName,name,isBlocked&\$orderby=companyId&\$top=200"
+    $devices = @()
+
+    # Build the OData URI based on device type
+    $entity = switch ($DeviceType) {
+        "Endpoint" { "endpoint" }
+        "Server"   { "server" }
+    }
+
+    $nextLink = "$BaseUri/v2/odata/$entity`?\$filter=(companyId eq $CompanyId) and (isBlocked eq false)&\$select=companyId,machineName,name,isBlocked&\$orderby=companyId&\$top=200"
 
     while ($nextLink) {
         $response = Invoke-CloudRadialApi -Method Get -Uri $nextLink -AuthHeader $AuthHeader -MaxRetries $MaxRetries
-        $endpoints += $response.value
+        $devices += $response.value
         $nextLink = $response.'@odata.nextLink'
     }
 
-    return $endpoints
+    return $devices
 }
 
 function New-TokenValue {
     param(
-        [object[]]$Endpoints
+        [object[]]$Devices
     )
 
-    $hostnames = @()
+    $deviceNames = @()
 
-    foreach ($endpoint in $Endpoints) {
-        $hostname = if ($endpoint.machineName) { $endpoint.machineName } else { $endpoint.name }
+    foreach ($device in $Devices) {
+        $deviceName = if ($device.machineName) { $device.machineName } else { $device.name }
 
-        if ($hostname -and $hostname.Trim()) {
-            $hostnames += $hostname.Trim()
+        if ($deviceName -and $deviceName.Trim()) {
+            $deviceNames += $deviceName.Trim()
         }
     }
 
     # Deduplicate and sort
-    $hostnames = $hostnames | Select-Object -Unique | Sort-Object
+    $deviceNames = $deviceNames | Select-Object -Unique | Sort-Object
 
-    return ($hostnames -join ",")
+    return ($deviceNames -join ",")
 }
 
 function Create-Token {
@@ -353,6 +390,8 @@ else {
 }
 
 # Process each company
+Write-Host "`nDevice type: $DeviceType | Token: @$TokenName" -ForegroundColor Cyan
+
 $created = 0
 $skipped = 0
 $failed = 0
@@ -361,24 +400,25 @@ foreach ($company in $targetCompanies) {
     Write-Host "`n--- [$($company.companyId)] $($company.name) ---" -ForegroundColor Cyan
 
     try {
-        $endpoints = Get-ActiveEndpoints -CompanyId $company.companyId -BaseUri $BaseUri -AuthHeader $authHeader -MaxRetries $MaxRetries
-        Write-Host "Found $($endpoints.Count) active endpoints."
+        $devices = Get-ActiveDevices -DeviceType $DeviceType -CompanyId $company.companyId -BaseUri $BaseUri -AuthHeader $authHeader -MaxRetries $MaxRetries
+        $deviceLabel = if ($DeviceType -eq "Endpoint") { "endpoints" } else { "servers" }
+        Write-Host "Found $($devices.Count) active $deviceLabel."
 
-        if ($endpoints.Count -eq 0 -and -not $CreateEmptyTokens) {
-            Write-Host "Skipping (no endpoints, -CreateEmptyTokens not set)" -ForegroundColor Yellow
+        if ($devices.Count -eq 0 -and -not $CreateEmptyTokens) {
+            Write-Host "Skipping (no $deviceLabel, -CreateEmptyTokens not set)" -ForegroundColor Yellow
             $skipped++
             continue
         }
 
-        $tokenValue = New-TokenValue -Endpoints $endpoints
+        $tokenValue = New-TokenValue -Devices $devices
 
         if (-not $tokenValue -and -not $CreateEmptyTokens) {
-            Write-Host "Skipping (no valid hostnames)" -ForegroundColor Yellow
+            Write-Host "Skipping (no valid device names)" -ForegroundColor Yellow
             $skipped++
             continue
         }
 
-        Write-Host "Creating token '$TokenName'..." -ForegroundColor Cyan
+        Write-Host "Creating token '@$TokenName'..." -ForegroundColor Cyan
         $preview = Format-TokenPreview -Value $tokenValue
         Write-Host "Token value: $preview" -ForegroundColor Gray
 
