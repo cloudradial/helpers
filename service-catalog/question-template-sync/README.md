@@ -1,8 +1,17 @@
 # Question Template Sync — Export and Import Service Catalog Templates
 
-## The Problem
+## Why This Matters
 
-When Partners build a well-tuned service request form in CloudRadial's Service Catalog with conditional logic, approval flows, and custom fields, they want to reuse it across other client companies or back it up before making changes. Manually recreating a complex template with 10+ questions and show/hide rules is error-prone and time-consuming.
+Question Templates are not part of CloudRadial's Content system, which means there is no built-in way to export them. If you want to share a template with another Partner, migrate templates when moving a client to a different portal, or simply back up your templates before making changes — there's no export button and no import option. The only path is manually rebuilding each template from scratch, question by question, conditional rule by conditional rule.
+
+This script solves that. It gives you full export and import capability for Question Templates through the v2 API. Export specific templates or all of them at once to JSON files, then import them into any other portal. Both functions are built into a single script — the `-Action` flag determines whether you're listing, exporting, or importing. The script handles everything, including automatically remapping the internal question IDs so that conditional logic (show/hide rules, parent-child relationships) works correctly in the destination portal without any manual fixup.
+
+## Who This Is For
+
+- **Partners migrating clients between portals** — Moving a client to a new environment? Export their Question Templates and import them to the new portal instead of rebuilding.
+- **Partners sharing templates with other Partners** — Built a great onboarding form or change request workflow? Export it to a JSON file and share it directly.
+- **Partners onboarding new clients** — Export your proven templates once, import them to every new client company. Same consistent forms from day one.
+- **Partners who want a safety net** — Export your templates before editing them. If a change breaks something, re-import the backup in seconds instead of trying to undo it manually.
 
 ## What You'll Need
 
