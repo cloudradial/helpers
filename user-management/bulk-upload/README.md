@@ -1,8 +1,17 @@
 # Bulk User Upload — Import Users from CSV
 
-## The Problem
+## Why This Matters
 
-Manually adding users one-by-one through the CloudRadial portal is tedious and error-prone when onboarding a new client with dozens or hundreds of users. This script automates the entire process by importing user data directly from a CSV file, handling validation, duplicate detection, rate limiting, and retry logic automatically.
+Before the v2 API, there was no way to bulk-add users to a CloudRadial company outside of the built-in PSA and Microsoft 365 sync integrations. If your Partner doesn't use a supported PSA, uses Google Workspace or a third-party email provider instead of M365, or has security policies that prevent enabling sync integrations, users had to be added one at a time through the portal.
+
+This script changes that. It lets any Partner import dozens or hundreds of users from a simple CSV file in seconds — no PSA integration required, no M365 tenant connection needed, no manual data entry. It's the first bulk user management option that works regardless of the Partner's stack.
+
+## Who This Is For
+
+- **Partners without a supported PSA** — No ConnectWise, Datto, or HaloPSA? You can still bulk-provision users.
+- **Google Workspace / third-party email Partners** — Users who aren't in M365 can now be loaded into CloudRadial in bulk.
+- **Security-conscious Partners** — Some organizations don't want to grant sync permissions to external platforms. A CSV import keeps credential exposure minimal — just your API keys, nothing else.
+- **Onboarding new clients** — When you land a new client with 50–200 users, this turns a multi-hour manual process into a 30-second script run.
 
 ## What You'll Need
 
