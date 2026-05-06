@@ -143,30 +143,45 @@ function ConvertTo-AssessmentRow {
     )
 
     $isCompliant = [bool]$Item.Status
-    $answer = if ($isCompliant) { "Compliant" } else { "Not Compliant" }
-    $isFlagged = if ($isCompliant) { "FALSE" } else { "TRUE" }
     $scorePercent = if ($Item.'Score Impact' -gt 0) { [math]::Round($Item.'Score Impact' * 100, 2) } else { 0 }
 
-    $risk = if (-not $isCompliant -and $scorePercent -ge 0.5) { "High" }
-            elseif (-not $isCompliant) { "Medium" }
-            else { "Low" }
+    # Answer: numeric per CloudRadial spec (+2 Compliant, -2 Not Compliant)
+    $answer      = if ($isCompliant) { 2 } else { -2 }
+    $textAnswer  = if ($isCompliant) { "Compliant" } else { "Not compliant" }
+    $isFlagged   = if ($isCompliant) { "No" } else { "Yes" }
+
+    # Risk matrix values (numeric scales per CloudRadial import spec)
+    if (-not $isCompliant -and $scorePercent -ge 0.5) {
+        $risk = 4; $likelihood = 4; $riskCost = 4; $riskImpact = 20   # Major / Likely / High
+    }
+    elseif (-not $isCompliant) {
+        $risk = 3; $likelihood = 3; $riskCost = 3; $riskImpact = 15   # Moderate / Possible / Medium
+    }
+    else {
+        $risk = 1; $likelihood = 1; $riskCost = 1; $riskImpact = 5    # Negligible / Rare / Very Low
+    }
 
     $row = [ordered]@{}
     foreach ($col in $script:templateColumns) { $row[$col] = $null }
 
-    $row['Checklist']               = $ChecklistName
     $row['Category']                = $Item.Category
     $row['Question']                = $Item.'Improvement Action'
     $row['Order']                   = $Order
     $row['Explanation']             = "Service: $($Item.Service) | Score Impact: $scorePercent% | Points Achieved: $($Item.'Points Achieved')"
-    $row['Type']                    = "Compliance"
+    $row['Type']                    = "List"
     $row['Answer']                  = $answer
-    $row['Responses']               = "Compliant,Not Compliant,Partially Compliant,N/A,Missing"
+    $row['Text Answer']             = $textAnswer
+    $row['Responses']               = "Compliant,Partially Compliant+,N/A=,Missing*,Not Compliant-"
     $row['Is Flagged']              = $isFlagged
-    $row['Evaluation']              = $answer
+    $row['Evaluation']              = "Review this control in the Microsoft 365 Defender portal under Secure Score."
     $row['Reference']               = "Microsoft Secure Score - $($Item.Service)"
-    $row['Control Type']            = "Technical"
+    $row['Control Type']            = 10       # Preventative
+    $row['Likelihood']              = $likelihood
     $row['Risk']                    = $risk
+    $row['Risk Cost']               = $riskCost
+    $row['Risk Impact']             = $riskImpact
+    $row['Update Key']              = ""
+    $row['Content Update Key']      = ""
     $row['Note Compliant']          = "This control is currently enabled and meeting Microsoft's recommendation."
     $row['Note Not Compliant']      = "This control is not yet enabled. Enabling it would improve your Secure Score by approximately $scorePercent%."
     $row['Note Partially Compliant'] = "This control is partially configured. Review the Microsoft 365 Defender portal for details."
@@ -182,8 +197,8 @@ function Show-Summary {
         [object[]]$Rows
     )
 
-    $compliant = ($Rows | Where-Object { $_.Answer -eq "Compliant" }).Count
-    $notCompliant = ($Rows | Where-Object { $_.Answer -eq "Not Compliant" }).Count
+    $compliant = ($Rows | Where-Object { $_.Answer -eq 2 }).Count
+    $notCompliant = ($Rows | Where-Object { $_.Answer -eq -2 }).Count
 
     Write-Host ""
     Write-Host "Conversion summary:" -ForegroundColor Cyan
@@ -195,7 +210,7 @@ function Show-Summary {
     Write-Host "Breakdown by category:" -ForegroundColor Cyan
 
     $Rows | Group-Object -Property Category | ForEach-Object {
-        $catCompliant = ($_.Group | Where-Object { $_.Answer -eq "Compliant" }).Count
+        $catCompliant = ($_.Group | Where-Object { $_.Answer -eq 2 }).Count
         Write-Host "  $($_.Name): $catCompliant/$($_.Count) compliant" -ForegroundColor White
     }
 }
@@ -232,7 +247,7 @@ $sorted = $secureScores | Sort-Object @(
 # Build assessment rows
 $orderCounter = 0
 $assessmentRows = foreach ($item in $sorted) {
-    $orderCounter++
+    $orderCounter += 10
     ConvertTo-AssessmentRow -Item $item -Order $orderCounter -ChecklistName $AssessmentName
 }
 
