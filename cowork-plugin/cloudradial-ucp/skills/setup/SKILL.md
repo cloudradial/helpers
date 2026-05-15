@@ -4,102 +4,117 @@ description: >
   Guide a partner through first-time setup of the CloudRadial UCP plugin.
   Use when the user says "set up CloudRadial", "configure the plugin",
   "connect to my portal", "I just installed the CloudRadial plugin",
-  or when any CloudRadial MCP tool call fails with an authentication error
-  or missing credentials message. Also trigger proactively if the user
-  tries to use a CloudRadial tool and gets an error about missing
-  CLOUDRADIAL_PUBLIC_KEY or CLOUDRADIAL_PRIVATE_KEY.
+  or when any CloudRadial API call fails with an authentication error,
+  missing config, or "PASTE_YOUR" placeholder message.
 metadata:
-  version: "0.1.0"
+  version: "0.5.0"
 ---
 
 # CloudRadial UCP Plugin Setup
 
-Walk the partner through connecting the plugin to their CloudRadial portal. Keep the tone friendly and supportive — most partners are technical but may not be familiar with environment variables.
+## Overview
 
-## Detection
+The CloudRadial UCP plugin connects to a hosted Azure Function that proxies requests to the CloudRadial API. The Azure Function is deployed by each partner with their own CloudRadial API keys stored securely in Azure App Settings.
 
-If a CloudRadial MCP tool returns an error containing "PUBLIC_KEY", "PRIVATE_KEY", "401", "Unauthorized", or "authentication", the plugin is not configured yet. Trigger this setup flow automatically.
+## Interactive Setup Wizard
 
-## Setup Flow
+When this skill is triggered, follow this workflow:
 
-### 1. Welcome
+### Step 1: Check if Configuration is Needed
 
-Greet the partner and explain what's about to happen in plain terms:
+Read the content of all three skill files and check if they contain the placeholder values `YOUR-FUNCTION-NAME` or `YOUR_FUNCTION_KEY`.
 
-"This plugin connects Claude to your CloudRadial portal so I can look up companies, manage articles, check endpoint counts, and more. To get started, I need your API keys from CloudRadial — this is a one-time setup that takes about 2 minutes."
+The skill files are at these paths (relative to the plugin root):
+- `${CLAUDE_PLUGIN_ROOT}/skills/setup/SKILL.md` (this file)
+- `${CLAUDE_PLUGIN_ROOT}/skills/portal-lookup/SKILL.md`
+- `${CLAUDE_PLUGIN_ROOT}/skills/content-management/SKILL.md`
 
-### 2. Get API Keys
+If placeholders are found, proceed to Step 2 (first-time setup).
+If no placeholders are found, skip to Step 5 (verification).
 
-Walk them through finding their keys:
+### Step 2: Ask for Azure Function Details
 
-"Log into your CloudRadial admin portal and go to **Settings > API**. You'll see two values:
-- **Public Key** — this is like your username
-- **Private Key** — this is like your password
+Use the AskUserQuestion tool to collect the user's Azure Function details:
 
-Copy both of them. Don't share them in this chat — you'll paste them into a command in the next step."
+**Question 1:** "What is your Azure Function app name? This is the name you chose when you created the function app (e.g., `my-cloudradial-mcp`). It's the first part of your URL: `https://YOUR-NAME.azurewebsites.net`"
 
-If the partner is unsure where to find the API settings, offer to help them navigate the admin portal using the browser.
+**Question 2:** "What is your Azure Function key? You can get this by running `az functionapp keys list` in PowerShell, or from the Azure Portal under your function app's 'App keys' section."
 
-### 3. Set Environment Variables
+Accept the function name in any format — strip `https://`, `.azurewebsites.net`, trailing paths, and whitespace. The key should be used exactly as provided (just trim whitespace).
 
-Detect their operating system from context (or ask). Then provide the right instructions:
+### Step 3: Update All Skill Files
 
-**For Windows (most partners):**
+Using the Read and Edit tools, update all three skill files:
 
-"Open PowerShell (you can search for it in the Start menu) and run these two commands, replacing the placeholder text with your actual keys:"
+1. Read each file
+2. Replace ALL occurrences of `YOUR-FUNCTION-NAME.azurewebsites.net` with `{their-function-name}.azurewebsites.net`
+3. Replace ALL occurrences of `YOUR_FUNCTION_KEY` with their actual function key
+4. Use `replace_all: true` to catch every instance
 
-```powershell
-[System.Environment]::SetEnvironmentVariable('CLOUDRADIAL_PUBLIC_KEY', 'paste-your-public-key-here', 'User')
-[System.Environment]::SetEnvironmentVariable('CLOUDRADIAL_PRIVATE_KEY', 'paste-your-private-key-here', 'User')
+Also update the setup skill's Architecture section below with the actual values so future sessions can reference them.
+
+### Step 4: Verify the Replacements
+
+After editing, read each file again and search for any remaining `YOUR-FUNCTION-NAME` or `YOUR_FUNCTION_KEY` placeholders. If any remain, fix them.
+
+### Step 5: Test the Connection
+
+Make a test API call to verify everything works:
+
+```
+web_fetch: https://{function-name}.azurewebsites.net/api/cloudradial/search_companies?code={function-key}&name=a
 ```
 
-"After running those commands, **close and reopen Claude Desktop** so it picks up the new settings."
+If this returns company data, the plugin is working.
 
-**For macOS:**
+If it fails:
+- **401 from Azure Function**: The function key is wrong. Ask the user to double-check it.
+- **401/403 in the response body**: The CloudRadial API keys stored in the Azure Function App Settings are wrong. The user needs to update them via Azure Portal or CLI.
+- **404**: The Azure Function may not be running. Check in Azure Portal.
+- **Timeout**: The function is cold-starting. Retry after a few seconds.
 
-"Open Terminal and run:"
+### Step 6: Confirm Success
 
-```bash
-echo 'export CLOUDRADIAL_PUBLIC_KEY="paste-your-public-key-here"' >> ~/.zshrc
-echo 'export CLOUDRADIAL_PRIVATE_KEY="paste-your-private-key-here"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-"Then **restart Claude Desktop**."
-
-**Optional — regional URL:**
-
-If the partner's portal is not on the US instance (api.us.cloudradial.com), they also need:
-
-```powershell
-[System.Environment]::SetEnvironmentVariable('CLOUDRADIAL_BASE_URL', 'https://api.eu.cloudradial.com', 'User')
-```
-
-### 4. Verify
-
-After they've restarted Claude Desktop, run a quick test:
-
-"Let's make sure everything works. I'll try to pull your company list."
-
-Call `search_companies` with a broad term (like "a") or `count_resources` for `company`. If it returns data, setup is complete. If it returns an auth error, help them troubleshoot (common issues: typo in keys, didn't restart Claude, copied extra whitespace).
-
-### 5. Success
-
-Confirm the connection and suggest a first action:
+Once the test call works, tell the user:
 
 "You're all set! I can see your portal data. Here are a few things you can try:
 - 'Show me all my companies'
 - 'Look up [company name]'
 - 'How many endpoints does [company] have?'
-- 'Create a KB article for [company] about [topic]'
+- 'Audit the portal for [company]'
+- 'Create a KB article for [company]'
+- 'Export a catalog template'
 
 What would you like to do first?"
 
-## Troubleshooting
+## Architecture (Reference)
 
-Common issues and resolutions:
+These values are updated by the setup wizard. If they still show placeholders, run setup again.
 
-- **"Unauthorized" or 401 error**: Keys are wrong or weren't saved properly. Have them re-run the PowerShell commands and verify the key values.
-- **"Connection refused" or timeout**: Check CLOUDRADIAL_BASE_URL — they might need a different regional endpoint.
-- **"Cannot find module"**: The plugin's node_modules may be missing. Suggest reinstalling the plugin.
-- **Keys work in Swagger but not here**: Make sure they restarted Claude Desktop after setting the env vars. Environment variables only load at application startup.
+- **Azure Function**: `https://YOUR-FUNCTION-NAME.azurewebsites.net/api/cloudradial/{operation}`
+- **Auth**: Function key passed as `code` query parameter
+- **Function Key**: `YOUR_FUNCTION_KEY`
+- **CloudRadial API keys**: Stored as App Settings on the Azure Function (not in local files)
+- **Read calls**: Use `web_fetch` (GET) or Chrome JS `fetch()`
+- **Write calls**: Use Chrome JS `fetch()` with POST/PUT/PATCH/DELETE (Claude in Chrome JavaScript tool)
+
+## Reconfiguring
+
+If the user needs to change their Azure Function (different deployment, rotated key, etc.):
+
+1. Ask for the new function name and/or key
+2. Read each skill file
+3. Replace the OLD function name/key with the NEW values (use the values from the Architecture section above to know what to search for)
+4. Update the Architecture section
+5. Test the connection
+
+## Changing CloudRadial API Keys
+
+If the CloudRadial API keys need to be rotated (these are stored in Azure, not in these files):
+
+1. Get new API keys from CloudRadial admin portal: **Settings > API**
+2. Update the Azure Function App Settings via CLI or Azure Portal:
+   ```
+   az functionapp config appsettings set --name {function-name} --resource-group {resource-group} --settings CLOUDRADIAL_PUBLIC_KEY="<key>" CLOUDRADIAL_PRIVATE_KEY="<key>"
+   ```
+3. Verify with a test call — no plugin changes needed, just the Azure side
