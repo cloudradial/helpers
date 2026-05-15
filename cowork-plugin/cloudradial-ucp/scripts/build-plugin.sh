@@ -8,11 +8,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 PLUGIN_NAME="cloudradial-ucp"
 
-echo "Installing dependencies..."
-cd "$ROOT_DIR/servers"
-npm install --production
-cd "$ROOT_DIR"
-
 echo "Packaging plugin..."
 rm -f "$ROOT_DIR/$PLUGIN_NAME.plugin"
 zip -r "/tmp/$PLUGIN_NAME.plugin" . \
@@ -21,11 +16,19 @@ zip -r "/tmp/$PLUGIN_NAME.plugin" . \
   -x ".gitignore" \
   -x "scripts/*" \
   -x "*.plugin" \
-  -x ".github/*"
+  -x ".github/*" \
+  -x "azure-mcp-server/*" \
+  -x "servers/*" \
+  -x "setup.ps1" \
+  -x ".mcp.json" \
+  -x "references/swagger.json" \
+  -x "node_modules/*"
 
 mv "/tmp/$PLUGIN_NAME.plugin" "$ROOT_DIR/$PLUGIN_NAME.plugin"
 
 SIZE=$(du -h "$ROOT_DIR/$PLUGIN_NAME.plugin" | cut -f1)
 echo ""
 echo "Built: $PLUGIN_NAME.plugin ($SIZE)"
-echo "Upload this file as a GitHub Release asset, or share directly with partners."
+echo ""
+echo "This plugin file does NOT include the Azure Function server code."
+echo "Users must deploy their own Azure Function separately — see DEPLOYMENT.md."
