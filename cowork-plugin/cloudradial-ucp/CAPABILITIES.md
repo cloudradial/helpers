@@ -12,8 +12,27 @@ https://<your-function>.azurewebsites.net/api/cloudradial/{operation}?code=<your
 
 Cowork uses two methods to call the API:
 
-- **`web_fetch`** (GET only) — For simple read operations. Built into Cowork. Requires URL provenance (paste the URL once per session to seed it).
-- **Chrome JS `fetch()`** (all HTTP methods) — For write operations and complex reads. Uses Claude in Chrome's JavaScript tool. No URL provenance restrictions, no URL length limits. This is the preferred method for create, update, and delete operations.
+- **Chrome JS `fetch()` with `x-functions-key` header** (all HTTP methods, **preferred**) — Uses Claude in Chrome's JavaScript tool. Authenticate via the `x-functions-key` HTTP header instead of the `?code=` query parameter. This avoids Chrome blocking responses that contain credentials in query strings. No URL provenance restrictions, no URL length limits. Works for all operations (read and write).
+- **`web_fetch`** (GET only, fallback) — For simple read operations. Built into Cowork. Uses `?code=KEY` in the query string. Requires URL provenance (paste the URL once per session to seed it). Can fail with complex OData filters or long URLs.
+
+### Authentication: `x-functions-key` Header (Preferred)
+
+The `x-functions-key` header is Azure Functions' standard authentication mechanism. Using it instead of the `?code=` query parameter is preferred because Chrome's security can block responses when sensitive data appears in URL query strings.
+
+**Chrome JS pattern:**
+```javascript
+(async()=>{
+  const r = await fetch("https://<your-function>.azurewebsites.net/api/cloudradial/{operation}?{params}", {
+    headers: {"x-functions-key": "<your-function-key>"}
+  });
+  return await r.text();
+})()
+```
+
+For `web_fetch` (fallback), the `?code=` query parameter is the only option:
+```
+web_fetch: https://<your-function>.azurewebsites.net/api/cloudradial/{operation}?code=<your-function-key>&{params}
+```
 
 ---
 
@@ -154,7 +173,7 @@ Create a new resource. Uses Chrome JS `fetch()` with POST.
 **Chrome JS example:**
 ```javascript
 (async()=>{
-  const r = await fetch("https://your-function.azurewebsites.net/api/cloudradial/create_resource?code=YOUR_KEY", {
+  const r = await fetch("https://YOUR-FUNCTION-NAME.azurewebsites.net/api/cloudradial/create_resource?code=YOUR_FUNCTION_KEY", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
@@ -189,7 +208,7 @@ Update an existing resource by ID. Uses Chrome JS `fetch()` with POST.
 **Chrome JS example:**
 ```javascript
 (async()=>{
-  const r = await fetch("https://your-function.azurewebsites.net/api/cloudradial/update_resource?code=YOUR_KEY", {
+  const r = await fetch("https://YOUR-FUNCTION-NAME.azurewebsites.net/api/cloudradial/update_resource?code=YOUR_FUNCTION_KEY", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({

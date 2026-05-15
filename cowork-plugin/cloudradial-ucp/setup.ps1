@@ -43,14 +43,24 @@ Write-Host "  Function URL: https://$funcName.azurewebsites.net"
 Write-Host "  Function Key: $($funcKey.Substring(0, [Math]::Min(8, $funcKey.Length)))..."
 Write-Host ""
 
-# Files to update
+# All 11 skill files to update
 $skillFiles = @(
     "skills\setup\SKILL.md",
+    "skills\portal-setup\SKILL.md",
     "skills\portal-lookup\SKILL.md",
-    "skills\content-management\SKILL.md"
+    "skills\content-management\SKILL.md",
+    "skills\user-management\SKILL.md",
+    "skills\endpoint-reporting\SKILL.md",
+    "skills\course-management\SKILL.md",
+    "skills\assessment-compliance\SKILL.md",
+    "skills\feedback-analysis\SKILL.md",
+    "skills\service-management\SKILL.md",
+    "skills\reporting-admin\SKILL.md"
 )
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$updated = 0
+$skipped = 0
 $errors = 0
 
 foreach ($file in $skillFiles) {
@@ -66,22 +76,23 @@ foreach ($file in $skillFiles) {
     $original = $content
 
     # Replace placeholder function name
-    $content = $content -replace "YOUR-FUNCTION-NAME\.azurewebsites\.net", "$funcName.azurewebsites.net"
+    $content = $content -replace "YOUR-FUNCTION-NAME", $funcName
 
     # Replace placeholder function key
     $content = $content -replace "YOUR_FUNCTION_KEY", $funcKey
 
     if ($content -eq $original) {
-        # Check if already configured (no placeholders found)
         if ($content -match "YOUR-FUNCTION-NAME|YOUR_FUNCTION_KEY") {
             Write-Host "  WARNING: $file still has placeholders after replacement" -ForegroundColor Yellow
             $errors++
         } else {
             Write-Host "  SKIP: $file (already configured)" -ForegroundColor DarkGray
+            $skipped++
         }
     } else {
         Set-Content -Path $filePath -Value $content -NoNewline
         Write-Host "  DONE: $file" -ForegroundColor Green
+        $updated++
     }
 }
 
@@ -100,21 +111,21 @@ foreach ($file in $skillFiles) {
     }
 }
 
+Write-Host ""
+Write-Host "Results: $updated updated, $skipped already configured, $errors warnings" -ForegroundColor Cyan
+
 if ($remaining -gt 0) {
     Write-Host ""
     Write-Host "Setup completed with warnings. Check the files above." -ForegroundColor Yellow
 } elseif ($errors -gt 0) {
     Write-Host "Setup completed with warnings." -ForegroundColor Yellow
 } else {
-    Write-Host "All skill files configured successfully!" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "All 11 skill files configured successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
-    Write-Host "  1. Package this folder as a .plugin file (see DEPLOYMENT.md Step 9)"
-    Write-Host "  2. Drag it into Claude Desktop in Cowork mode"
-    Write-Host "  3. Paste this URL in chat to seed provenance:"
-    Write-Host ""
-    Write-Host "     https://$funcName.azurewebsites.net/api/cloudradial/search_companies?code=$funcKey&name=test" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  4. Try: 'Look up [company name] in CloudRadial'"
+    Write-Host "  1. Build the plugin:  ./scripts/build-plugin.sh"
+    Write-Host "  2. Drag the .plugin file into Claude Desktop (Cowork mode)"
+    Write-Host "  3. Say 'Set up CloudRadial' to test the connection"
     Write-Host ""
 }
