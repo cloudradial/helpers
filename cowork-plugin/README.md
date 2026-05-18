@@ -46,7 +46,6 @@ cowork-plugin/
     ├── azure-mcp-server/        ← Azure Function source code (NOT in the .plugin)
     ├── scripts/
     │   └── build-plugin.sh      ← Builds the .plugin file
-    ├── setup.ps1                ← PowerShell setup for developers
     ├── .github/workflows/       ← GitHub Actions release automation
     ├── README.md                ← Plugin-specific docs
     ├── DEPLOYMENT.md            ← Full Azure Function deployment guide
