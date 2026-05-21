@@ -1,0 +1,18 @@
+{
+  "name": "cloudradial-ucp",
+  "version": "2.0.0",
+  "description": "Connect Claude to your CloudRadial UCP Portal via a local MCP server. After installing, say 'Set up CloudRadial' — the wizard will store your API keys in the OS keychain and you're ready to go.",
+  "author": {
+    "name": "Nick Westgate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cloudradial/helpers/tree/main/cowork-plugin/cloudradial-ucp"
+  },
+  "mcpServers": {
+    "cloudradial-ucp": {
+      "command": "npx",
+      "args": ["-y", "@cloudradial/ucp-mcp"]
+    }
+  }
+}
