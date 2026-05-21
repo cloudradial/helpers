@@ -84,3 +84,35 @@ List users with full OData filtering support. Better than user_lookup for bulk q
 **Count users for a company:** Call `count_resources` with `resource_type: "user"`, `filter: "companyId eq 42"`.
 
 **List users with specific fields:** Call `list_resources` with `resource_type: "user"`, `filter: "companyId eq 42"`, `select: "userId,firstName,lastName,email,role"`.
+
+## API Reference
+
+For exact field names and schema details, read `${CLAUDE_PLUGIN_ROOT}/references/api-reference.md`.
+
+## Workflows
+
+### Find a Specific User
+
+1. Use `user_lookup` with their email or name
+2. If multiple matches, present the list and ask the user to confirm
+3. Use `get_resource` with `resource_type: "user"` and the `userId` for full details if needed
+
+### User Adoption Analysis for a Company
+
+1. Count total users for the company with `count_resources`
+2. List users to check role distribution with `list_resources`
+3. Cross-reference with course enrollments — `list_resources` with `resource_type: "course_enrollment"`, `filter: "companyId eq 42"` — to check training completion
+4. Cross-reference with feedback — `list_resources` with `resource_type: "feedback"`, `filter: "companyId eq 42"` — to check engagement
+5. Present a summary: total users, roles breakdown, training completion rate, feedback activity
+
+### Bulk User Report
+
+1. List all users across all companies (paginate with `top: "200"` and `skip`)
+2. Group by company
+3. Flag companies with zero users or unusually low counts
+4. Present as a summary table
+
+### Portal Admin Users
+
+Portal admins are tracked separately as `application_user`. There is no OData listing for them — use `get_resource` with `resource_type: "application_user"` and the user id. To find existing admins, filter the regular `user` resource by `isPartnerAdminUser eq true`.
+

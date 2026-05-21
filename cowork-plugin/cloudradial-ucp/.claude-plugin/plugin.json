@@ -11,8 +11,8 @@
   },
   "mcpServers": {
     "cloudradial-ucp": {
-      "command": "npx",
-      "args": ["-y", "@cloudradial/ucp-mcp"]
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/mcp-server/launch.cjs"]
     }
   }
 }

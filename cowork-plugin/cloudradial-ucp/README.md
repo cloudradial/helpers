@@ -104,7 +104,7 @@ Composite-key resources (need extra args on get/update/delete): `archive_item`, 
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Install steps for Claude Desktop, Claude Code, and Cowork, plus troubleshooting.
 - **[CAPABILITIES.md](CAPABILITIES.md)** — Tool reference: operations, 30 resource types, OData query options, examples.
 - **[references/api-reference.md](references/api-reference.md)** — CloudRadial API V2 field-level schema reference.
-- **MCP server source:** [`../cloudradial-ucp-mcp/`](../cloudradial-ucp-mcp) — the Node project that powers the tools.
+- **MCP server source:** [`mcp-server/`](mcp-server) — the Node project that powers the tools, bundled inside this plugin. First run installs production deps locally via `mcp-server/launch.cjs`.
 
 ## Legacy: Azure Function path
 

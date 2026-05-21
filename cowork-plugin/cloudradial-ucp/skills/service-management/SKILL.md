@@ -89,4 +89,24 @@ For exact field names and schema details, read `${CLAUDE_PLUGIN_ROOT}/references
 
 ## Workflows
 
-### Service Coverage for a Com
+### Service Coverage for a Company
+
+1. List all available services with `list_resources` / `resource_type: "service"`
+2. List service installs filtered by companyId — `list_resources` with `resource_type: "service_install"`, `filter: "companyId eq 42"`
+3. Cross-reference to identify which services are installed vs missing
+4. Summarize: installed services, missing services, coverage percentage
+
+### Domain Expiration Report
+
+1. List domains filtered by companyId (or all domains) — `list_resources` with `resource_type: "domain"`
+2. Check `expirationDate` against current date
+3. Flag domains expiring within 30/60/90 days
+4. Present as a prioritized list
+
+### Cross-Company Service Audit
+
+1. List all service installs (paginate with `top: "200"` and `skip` if needed)
+2. Group by company
+3. Compare against the full service list
+4. Identify companies with low service adoption
+5. Present as a gap analysis

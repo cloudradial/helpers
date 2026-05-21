@@ -90,5 +90,31 @@ For exact field names and schema details, read `${CLAUDE_PLUGIN_ROOT}/references
 
 ### Endpoint Inventory for a Company
 
-1. Count endpoints filtered by companyId
-2. List endpoints with key fields: `select=endpointId,name,operatingSystem,manufacturer,model,
+1. Count endpoints filtered by companyId with `count_resources`
+2. List endpoints with key fields — `list_resources` with `resource_type: "endpoint"`, `filter: "companyId eq 42"`, `select: "endpointId,name,operatingSystem,manufacturer,model,lastSeen"`
+3. Paginate if more than 200 (use `top: "200"` and `skip`)
+4. Summarize: total count, OS distribution, manufacturer breakdown
+
+### Warranty Expiration Report
+
+1. List endpoints for a company with warranty fields — `select: "endpointId,name,warrantyExpirationDate,manufacturer,model"`
+2. Group by warranty status: expired, expiring within 30/60/90 days, current
+3. Flag critical items (expired or expiring soon)
+4. Present as a prioritized list with counts per category
+5. To refresh warranty data for a specific endpoint, call `endpoint_update_warranty` with its `serial_number` (async — CloudRadial fetches in the background)
+
+OData date filters like `warrantyExpirationDate lt 2026-06-01` work in the `filter` parameter.
+
+### Application Audit
+
+1. Identify the target endpoint(s)
+2. List `endpoint_application` records filtered by endpointId — `list_resources` with `resource_type: "endpoint_application"`, `filter: "endpointId eq 789"`
+3. Group by publisher or application name
+4. Flag outdated versions or unauthorized software if criteria are provided
+
+### Cross-Company Endpoint Summary
+
+1. List all companies with `list_resources` / `resource_type: "company"`
+2. For each company, count endpoints with `count_resources`
+3. Flag companies with zero endpoints (not onboarded) or unusually high/low counts
+4. Present as a ranked summary

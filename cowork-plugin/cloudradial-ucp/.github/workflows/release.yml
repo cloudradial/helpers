@@ -14,20 +14,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Package plugin
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build MCP server (refresh dist/)
         run: |
-          zip -r cloudradial-ucp.plugin . \
+          cd cowork-plugin/cloudradial-ucp/mcp-server
+          npm ci --no-audit --no-fund
+          npm run build
+          # Strip dev deps; partner-side launch.cjs will install production deps on first run.
+          rm -rf node_modules
+
+      - name: Package plugin
+        working-directory: cowork-plugin/cloudradial-ucp
+        run: |
+          zip -r ../../cloudradial-ucp.plugin . \
             -x "*.DS_Store" \
             -x ".git/*" \
             -x ".gitignore" \
             -x "scripts/*" \
             -x ".github/*" \
             -x "azure-mcp-server/*" \
-            -x "servers/*" \
             -x "*.plugin" \
             -x ".mcp.json" \
             -x "references/swagger.json" \
-            -x "node_modules/*"
+            -x "mcp-server/node_modules/*" \
+            -x "mcp-server/.install-complete" \
+            -x "mcp-server/.env" \
+            -x "mcp-server/src/*"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

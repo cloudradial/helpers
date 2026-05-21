@@ -2,6 +2,11 @@
 node_modules/
 azure-mcp-server/dist/
 
+# Bundled MCP server runtime state (created on first launch)
+mcp-server/.install-complete
+mcp-server/.env
+mcp-server/*.log
+
 # Azure Function local secrets
 azure-mcp-server/local.settings.json
 
