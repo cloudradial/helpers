@@ -1,5 +1,24 @@
+import * as os from "node:os";
 import { callApi, RESOURCE_MAP, escapeODataString } from "./cloudradial-client.js";
-import { clearKeychain, getStatus, saveToKeychain, } from "./credentials.js";
+import { clearKeychain, getStatus, keychainSelfTest, saveToKeychain, } from "./credentials.js";
+function describePlatform() {
+    const platform = process.platform; // 'win32' | 'darwin' | 'linux' | other
+    const label = platform === "darwin" ? "macOS" :
+        platform === "win32" ? "Windows" :
+            platform === "linux" ? "Linux" :
+                platform;
+    return {
+        platform,
+        label,
+        release: os.release(),
+        arch: process.arch,
+        nodeVersion: process.version,
+        keychainBackend: platform === "darwin" ? "macOS Keychain" :
+            platform === "win32" ? "Windows Credential Manager" :
+                platform === "linux" ? "libsecret / Secret Service" :
+                    "unknown",
+    };
+}
 const RESOURCE_TYPES = Object.keys(RESOURCE_MAP);
 function str(args, key) {
     const v = args[key];
@@ -27,12 +46,20 @@ export const tools = [
     // -------------------------------------------------------------------------
     {
         name: "setup_status",
-        description: "Check whether CloudRadial credentials are configured. Returns {configured, source ('env'|'keychain'), baseUrl, publicKeyHint (last 4 chars of public key)}. Never returns the full keys. Call this BEFORE any other CloudRadial tool — if configured is false, run the setup wizard before doing CloudRadial work.",
+        description: "Diagnostic info for the setup wizard. Returns:\n" +
+            "- configured (bool), source ('env' | 'keychain'), baseUrl, publicKeyHint (last 4 chars of public key)\n" +
+            "- platform: { platform: 'darwin' | 'win32' | 'linux', label, arch, release, nodeVersion, keychainBackend }\n" +
+            "- keychain: { ok: bool, error?: string } — result of a live read/write/delete probe against the OS keychain\n" +
+            "Never returns the full keys. Call this BEFORE any other CloudRadial tool. The wizard branches on platform.platform and keychain.ok to give OS-appropriate guidance.",
         inputSchema: {
             type: "object",
             properties: {},
         },
-        handler: async () => getStatus(),
+        handler: async () => ({
+            ...getStatus(),
+            platform: describePlatform(),
+            keychain: keychainSelfTest(),
+        }),
     },
     {
         name: "configure_credentials",

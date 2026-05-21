@@ -95,3 +95,23 @@ export function clearKeychain(): void {
     try { entry(k).deletePassword(); } catch { /* missing entry is fine */ }
   }
 }
+
+/**
+ * Probe the OS keychain by writing/reading/deleting a throwaway entry.
+ * Lets the setup wizard detect environments where the keychain backend
+ * is missing (e.g. headless Linux without libsecret) before trying to
+ * store real credentials.
+ */
+export function keychainSelfTest(): { ok: boolean; error?: string } {
+  const probe = new Entry(SERVICE, "__selftest__");
+  try {
+    probe.setPassword("ok");
+    const got = probe.getPassword();
+    probe.deletePassword();
+    if (got !== "ok") return { ok: false, error: "keychain read returned unexpected value" };
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: msg };
+  }
+}
