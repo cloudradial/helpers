@@ -6,7 +6,7 @@ Microsoft Secure Score gives you a detailed breakdown of a tenant's security pos
 
 Without this script, you'd need to manually create each assessment question, copy over each improvement action, set the compliance status, and calculate risk — for potentially hundreds of items. That's hours of copy-paste work per tenant.
 
-This script automates the entire conversion. Export Secure Scores from Microsoft 365 Defender, run the script, and import the result into CloudRadial. Every improvement action becomes an assessment question with the correct compliance status, risk level, and pre-written notes — ready for your next client review.
+This script automates the entire conversion. Export Secure Scores from the CloudRadial portal, run the script, and import the result as an Assessment. Every improvement action becomes an assessment question with the correct compliance status, risk level, and pre-written notes — ready for your next client review.
 
 ## Who This Is For
 
@@ -22,13 +22,13 @@ This script automates the entire conversion. Export Secure Scores from Microsoft
 
 - PowerShell 5.1 or later
 - The [ImportExcel](https://github.com/dfinke/ImportExcel) module (the script auto-installs it if missing)
-- A Secure Score export from Microsoft 365 Defender (.xlsx format)
+- A Secure Score export from CloudRadial's Admin > Secure Score page (.xlsx format)
 - Access to CloudRadial's Content > Assessments > Import
 
-## Step 1: Export Secure Scores from Microsoft 365
+## Step 1: Export Secure Scores from CloudRadial
 
-1. Log in to [Microsoft 365 Defender](https://security.microsoft.com)
-2. Navigate to **Secure Score** > **Recommended actions**
+1. Log in to your CloudRadial portal
+2. Navigate to **Admin** > **Secure Score** and select the company
 3. Click **Export** to download the .xlsx file
 4. Save it somewhere accessible (e.g., your desktop or a project folder)
 

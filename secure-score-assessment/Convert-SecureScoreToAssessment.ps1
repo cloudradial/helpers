@@ -11,13 +11,16 @@
     Produces a ready-to-import .xlsx file that can be uploaded directly via
     Content > Assessments > Import in the CloudRadial portal.
 
+    Export the Secure Score data from Admin > Secure Score in the CloudRadial
+    portal, then run this script against the exported .xlsx file.
+
     Requires the ImportExcel PowerShell module. If not installed, the script will
     attempt to install it automatically for the current user.
 
 .PARAMETER InputFile
-    Mandatory. Path to the Secure Score .xlsx export file. The file must contain
-    columns: Rank, Improvement Action, Score Impact, Points Achieved, Status,
-    Category, Service.
+    Mandatory. Path to the Secure Score .xlsx export file from CloudRadial's
+    Admin > Secure Score page. The file must contain columns: Rank,
+    Improvement Action, Score Impact, Points Achieved, Status, Category, Service.
 
 .PARAMETER OutputFile
     Optional. Path for the generated CloudRadial Assessment import .xlsx file.
