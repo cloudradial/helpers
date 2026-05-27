@@ -1,6 +1,6 @@
 # CloudRadial UCP Plugin — Deployment Guide
 
-This plugin ships an MCP server config in `.claude-plugin/plugin.json` plus the MCP server source under `mcp-server/`. On first use, a small bootstrap (`mcp-server/launch.cjs`) installs production dependencies locally and starts the server — no Azure Function to deploy, no npm package to install yourself.
+This plugin ships a bundled MCP server inside the `.plugin` file itself — no separate server to deploy, no npm package to install, no network access required at install time. Your MCP client extracts the plugin and spawns the bundled server (`server/index.mjs`) as a local Node process.
 
 ## Prerequisites
 
@@ -8,34 +8,49 @@ This plugin ships an MCP server config in `.claude-plugin/plugin.json` plus the 
 - **A CloudRadial admin account** with access to **Settings → API** (where you generate the public + private keys).
 - **An MCP-capable Claude client**: Claude Desktop, Claude Code, or Cowork.
 
-The first MCP tool call may take 5–10 seconds while `npx` downloads the package; subsequent calls are instant.
+## Pick your `.plugin` file
+
+The plugin is published as one `.plugin` per OS/arch — each contains a native keychain binary for that platform only. Pick the one that matches the machine running your MCP client:
+
+| Your machine | File to download |
+|---|---|
+| Mac (M1/M2/M3/M4 — Apple Silicon) | `cloudradial-ucp-macos-arm64.plugin` |
+| Mac (Intel) | `cloudradial-ucp-macos-x64.plugin` |
+| Windows (most PCs) | `cloudradial-ucp-windows-x64.plugin` |
+| Windows ARM (Surface Pro X, Copilot+ PCs) | `cloudradial-ucp-windows-arm64.plugin` |
+| Linux x86_64 | `cloudradial-ucp-linux-x64.plugin` |
+| Linux ARM64 | `cloudradial-ucp-linux-arm64.plugin` |
+
+If you're not sure, on Mac run `uname -m` (`arm64` = Apple Silicon, `x86_64` = Intel); on Windows check Settings → System → About → System type. Grab the file from the [GitHub releases page](https://github.com/cloudradial/helpers/releases) of the plugin repo.
 
 ## Install — Cowork
 
-1. Drag `cloudradial-ucp.plugin` into your Cowork window.
+1. Drag your downloaded `cloudradial-ucp-<os>.plugin` into your Cowork window.
 2. Cowork prompts for plugin approval; accept.
 3. Cowork restarts the MCP server bridge automatically.
-4. In a new Cowork conversation, say **"Set up CloudRadial."** The setup wizard handles the rest.
+4. In a new Cowork conversation, say **"Setup the CloudRadial Plugin."** The setup wizard handles the rest.
 
 ## Install — Claude Code
 
+Download the `.plugin` for your OS, then from a terminal:
+
 ```bash
-claude /plugin install cloudradial-ucp
+claude /plugin install /path/to/cloudradial-ucp-<os>.plugin
 ```
 
-Then restart Claude Code (or `/plugin reload cloudradial-ucp`). Confirm the MCP server loaded:
+Restart Claude Code (or `/plugin reload cloudradial-ucp`). Confirm the MCP server loaded:
 
 ```bash
 claude mcp list
 ```
 
-You should see `cloudradial-ucp` in the list. Then in a new Claude Code conversation, say **"Set up CloudRadial."**
+You should see `cloudradial-ucp` in the list. Then in a new Claude Code conversation, say **"Setup the CloudRadial Plugin."**
 
 ## Install — Claude Desktop
 
-1. Install the plugin via the Claude Desktop plugin gallery (or manually drop the `.plugin` file in the plugins directory).
+1. Download the `.plugin` for your OS and drop it into Claude Desktop's plugins directory (or install via the plugin gallery if listed).
 2. **Quit and reopen Claude Desktop** so it picks up the MCP server config.
-3. In a new conversation, say **"Set up CloudRadial."**
+3. In a new conversation, say **"Setup the CloudRadial Plugin."**
 
 ## Setup wizard — what to expect
 
@@ -49,73 +64,31 @@ The wizard (defined in `skills/setup/SKILL.md`) does the following:
 6. **Stores credentials in your OS keychain.** Confirms with the last 4 chars of the public key.
 7. **Verifies end-to-end** with a `search_companies` call. Tells you what to try first.
 
-## Manual install (advanced)
+## Skipping the keychain (env-var credentials)
 
-If you can't or don't want to use the plugin format, you can register the MCP server directly with your client.
+If you'd rather not store credentials via the wizard — for example, on a headless Linux box with no Secret Service running, or in a locked-down dev environment — the server reads these env vars before checking the keychain:
 
-If you've extracted the plugin contents somewhere on disk (e.g. `~/cloudradial-ucp/`), you can point an MCP client at the bundled launcher directly. Substitute `<plugin-path>` for the absolute path to the extracted `cloudradial-ucp/` directory.
-
-### Claude Desktop — `claude_desktop_config.json`
-
-Open via **Settings → Developer → Edit Config**:
-
-```json
-{
-  "mcpServers": {
-    "cloudradial-ucp": {
-      "command": "node",
-      "args": ["<plugin-path>/mcp-server/launch.cjs"]
-    }
-  }
-}
+```
+CLOUDRADIAL_PUBLIC_KEY=...
+CLOUDRADIAL_PRIVATE_KEY=...
+CLOUDRADIAL_BASE_URL=https://api.us.cloudradial.com   # optional, defaults to US
 ```
 
-Restart Claude Desktop.
-
-### Claude Code
-
-```bash
-claude mcp add cloudradial-ucp -- node <plugin-path>/mcp-server/launch.cjs
-```
-
-### Env-var-based credentials (skip the wizard)
-
-If you'd rather not have your keys pass through a chat conversation, add them as environment variables instead of using `configure_credentials`:
-
-```json
-{
-  "mcpServers": {
-    "cloudradial-ucp": {
-      "command": "node",
-      "args": ["<plugin-path>/mcp-server/launch.cjs"],
-      "env": {
-        "CLOUDRADIAL_PUBLIC_KEY": "...",
-        "CLOUDRADIAL_PRIVATE_KEY": "...",
-        "CLOUDRADIAL_BASE_URL": "https://api.us.cloudradial.com"
-      }
-    }
-  }
-}
-```
-
-The server reads env vars first; if set, it skips the keychain entirely.
+Set them in the OS environment **before** launching your MCP client (Cowork / Claude Code / Claude Desktop) and the server will pick them up. If both env vars and a keychain entry are present, env vars win.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `setup_status` tool isn't available | MCP server not registered with the client | Reinstall the plugin or restart your client. For Claude Code: `claude mcp list` to confirm. |
-| First tool call is slow (~10–30 s) | Bootstrap is running `npm install` for production deps | Normal one-time cost. Watch for `[cloudradial-ucp-mcp] Dependencies installed.` in the MCP server log. Subsequent spawns are <1 s. |
 | `configure_credentials` returns 401/403 | Wrong CloudRadial keys | Re-check **Settings → API** in CloudRadial. The keys must be the V2 public + private pair. |
-| "credentials not configured" on every call | Keychain write succeeded but read fails (rare; happens on Linux SSH sessions with no Secret Service running) | Switch to env-var config (see above) |
+| "credentials not configured" on every call | Keychain write succeeded but read fails (rare; happens on Linux SSH sessions with no Secret Service running) | Switch to env-var credentials (see above) |
 | Tool calls hang | MCP server process died | Restart your client. Check the client's MCP server log. |
-| `npm install failed` in bootstrap log | Bootstrap couldn't reach the npm registry on first run | Open a terminal, `cd` to `<plugin>/mcp-server`, run `npm install --omit=dev --ignore-scripts` manually, then retry. |
+| `node: command not found` in the client log | Node isn't on the GUI app's PATH | Install Node 18+ and ensure it's on the global PATH (not just your shell), then restart the MCP client. |
 
 ## Updating
 
-Reinstall the latest plugin from [GitHub Releases](https://github.com/cloudradial/helpers/releases) (drag the new `.plugin` file into Cowork, or `/plugin update cloudradial-ucp` in Claude Code). Your stored credentials in the OS keychain survive updates — no need to re-run the setup wizard.
-
-If you want to force the bundled MCP server to refresh its deps after a major version bump, delete `mcp-server/.install-complete` and `mcp-server/node_modules` from the installed plugin location; the next spawn will reinstall.
+Download the latest `cloudradial-ucp-<your-os>.plugin` from the [releases page](https://github.com/cloudradial/helpers/releases) and reinstall it the same way you installed the first one. Your stored credentials in the OS keychain survive the upgrade — no re-entering keys.
 
 ## Uninstalling
 
@@ -124,8 +97,12 @@ If you want to force the bundled MCP server to refresh its deps after a major ve
 
 ## Architecture details
 
-- Source: [`mcp-server/`](mcp-server) (bundled inside the plugin).
-- Runtime: Node 18+, ESM, TypeScript-compiled to `dist/`.
+- Source: [`../cloudradial-ucp-mcp/`](../cloudradial-ucp-mcp).
+- Runtime: Node 18+, ESM. Shipped as a single esbuild-bundled `server/index.mjs` inside the `.plugin`.
 - Auth to CloudRadial: HTTP Basic with `public:private`, base64-encoded.
-- Credential storage: `@napi-rs/keyring` (Windows Credential Manager / macOS Keychain / Linux libsecret).
+- Credential storage: the `@napi-rs/keyring` native module (Windows Credential Manager / macOS Keychain / Linux libsecret). One platform's native binary ships per `.plugin` file.
 - Transport: stdio MCP (single child process per session).
+
+### Build-output layout
+
+The keyring native module is shipped under `server/vendor/keyring/`, **not** `server/node_modules/`. The build vendors the `@napi-rs/keyring` wrapper to a flat, unscoped path and inlines the platform `.node` binary beside it (`server/vendor/keyring/keyring.<platform>.node`), then rewrites the bundle's `@napi-rs/keyring` import to `./vendor/keyring/index.js`. This is required because Cowork's plugin-upload validator rejects any zip entry whose path contains `@` (the npm scope separator), which scoped packages under `node_modules` can't avoid. The build also rewrites each zip entry's "version made by" byte to Unix (3) so strict macOS extractors accept the archive. Net result: every shipped `.plugin` has zero `@` in any path and no `node_modules/` directory.
