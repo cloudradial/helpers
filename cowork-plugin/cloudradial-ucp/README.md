@@ -1,31 +1,93 @@
 # CloudRadial UCP Plugin for Claude
 
-Connect Claude Desktop, Claude Code, or Cowork to your CloudRadial UCP Portal via a local MCP server. Query companies, users, endpoints, articles, feedback, and 20+ other resource types — with full read/write support — directly from Claude.
+Connect Claude to your CloudRadial UCP Portal. Once it's installed, just ask Claude in plain English — look up companies, build training courses, create assessments, refresh device warranty info, and manage 30+ other CloudRadial resource types. No scripts, no separate server to deploy, no copy-pasting API keys around.
 
-## Architecture
+## Install — start here
+
+You install this once **for each Claude app you use** (Cowork, Claude Code, or Claude Desktop). The good news: you enter your CloudRadial keys only **once per computer** — they're stored in your computer's keychain and shared automatically with every Claude app on that machine.
+
+### Step 1 — Download the right file for your computer
+
+Go to the [**releases page**](https://github.com/cloudradial/helpers/releases) and download the **one** file that matches your computer:
+
+| Your computer | File to download |
+|---|---|
+| Mac — Apple Silicon (M1/M2/M3/M4) | `cloudradial-ucp-macos-arm64.plugin` |
+| Mac — Intel (older) | `cloudradial-ucp-macos-x64.plugin` |
+| Windows — most PCs | `cloudradial-ucp-windows-x64.plugin` |
+| Windows on ARM (Surface Pro X, Copilot+ PC) | `cloudradial-ucp-windows-arm64.plugin` |
+| Linux | `cloudradial-ucp-linux-x64.plugin` (or `-linux-arm64`) |
+
+**Not sure which Mac you have?** Click the  Apple menu → **About This Mac**. If the "Chip" line starts with "Apple," choose **arm64**. If it says "Intel," choose **x64**.
+
+### Step 2 — Install it into your Claude app
+
+- **Cowork:** drag the downloaded file into the Cowork window, and approve it when asked.
+- **Claude Desktop:** drag the file into the app (or add it from the plugin gallery), then **quit and reopen** Claude Desktop.
+- **Claude Code:** run `claude /plugin install <path-to-the-downloaded-file>`, then restart Claude Code.
+
+> Using more than one of these apps? Install the **same** downloaded file into each one.
+
+### Step 3 — Turn it on
+
+Start a new conversation and type:
+
+> **Setup the CloudRadial Plugin**
+
+Claude will ask for your CloudRadial **public key** and **private key** (find them in your CloudRadial admin portal under **Settings → API**), check that they work, and store them securely in your computer's keychain. You only do this once per computer.
+
+### Step 4 — Try something
+
+Pick anything from **What you can do** below, or just ask Claude in your own words.
+
+## What you can do
+
+Copy any of these into Claude and swap in your own company names / IDs:
+
+**🔎 Look things up**
+> Look up Acme Corp in CloudRadial
+>
+> Give me a full overview of company 42 before my meeting
+>
+> Which of Contoso's endpoints are out of warranty?
+>
+> What feedback has company 42 submitted lately?
+
+**📝 Create content & training**
+> Create a security assessment for company 42
+>
+> Write a KB article for Contoso about resetting MFA
+>
+> Build a phishing-awareness training course for company 15
+>
+> Build a training course for Contoso from this YouTube video: *(paste link)*
+
+**🔧 Maintain the portal**
+> Refresh the warranty info for endpoint serial ABC12345
+>
+> Update warranty dates for all of Acme Corp's devices
+>
+> Set up flexible-asset tracking for Contoso
+>
+> Show me Contoso's flexible assets and how they're configured
+
+> **How the last two work:** These combine Claude's own abilities with the plugin's MCP server. For the course: Claude reads/summarizes the YouTube video, then the plugin's server creates the course and its lessons in CloudRadial (`create_resource`). For flexible assets: Claude structures the data and the server writes the `flexible_asset` records into your portal. Both are fully done through the plugin — the only thing it *doesn't* do is bulk-import flexible assets directly from ITGlue (that's a separate standalone sync script).
+
+## How it works
 
 ```
 You in Claude
      |
      |  MCP tool calls (in-process, over stdio)
      v
-@cloudradial/ucp-mcp  (local Node process, auto-spawned by your MCP client)
+Bundled MCP server  (server/index.mjs, inside the .plugin, spawned by your Claude app)
      |
      |  HTTPS with HTTP Basic auth (keys from OS keychain)
      v
 CloudRadial API V2
 ```
 
-There is **no Azure Function**, no Chrome extension, no separate server to deploy. The plugin ships an MCP server config in `plugin.json` — installing the plugin auto-registers the server with your MCP client. Credentials live in the OS keychain (Windows Credential Manager / macOS Keychain / Linux libsecret).
-
-## Quick start
-
-1. **Install the plugin.** Drag the `.plugin` file into Cowork, or run `/plugin install cloudradial-ucp` in Claude Code, or install via the Claude Desktop plugin gallery.
-2. **Restart your MCP client** so it picks up the newly registered MCP server.
-3. **Say "Set up CloudRadial."** The setup wizard asks for your CloudRadial public + private keys (Settings → API in your CloudRadial admin portal), validates them with a live API call, and stores them in your OS keychain.
-4. **Start using it.** "Look up Acme Corp," "How many endpoints does company 42 have?", "Create a KB article about password resets," etc.
-
-That's the whole flow. No Azure deployment, no Chrome extension required, no config file to edit by hand.
+There is **no Azure Function**, no Chrome extension, no separate server to deploy, no npm install at runtime. The `.plugin` file contains the MCP server itself (esbuild-bundled JS + a native keychain binary for your OS). The plugin's `.mcp.json` tells your Claude app how to launch it; installing the plugin auto-registers the server. Credentials live in the OS keychain (Windows Credential Manager / macOS Keychain / Linux libsecret).
 
 ## Skills (11)
 
@@ -80,19 +142,6 @@ Composite-key resources (need extra args on get/update/delete): `archive_item`, 
 - **Privacy note for setup.** Because setup happens in chat, your keys appear briefly in the conversation transcript when you paste them. If you prefer the keys never enter the LLM context, set `CLOUDRADIAL_PUBLIC_KEY` and `CLOUDRADIAL_PRIVATE_KEY` environment variables in your MCP client config instead — the server picks those up first and skips the keychain.
 - **To rotate:** re-run the setup wizard (it overwrites the keychain entry). To remove: ask Claude to run `clear_credentials`.
 
-## Usage examples
-
-- "Look up Acme Corp in CloudRadial"
-- "Give me an overview of company 42 before my meeting"
-- "How many endpoints does company 42 have?"
-- "Show me all articles for Contoso"
-- "Create a KB article for company 42 about password resets"
-- "Build a training course about phishing awareness"
-- "Which endpoints are out of warranty?"
-- "Check assessment compliance for company 15"
-- "What feedback has company 42 submitted?"
-- "List all services installed for Contoso"
-
 ## Things to know
 
 - **OData pagination caps at 200.** The CloudRadial API returns at most 200 results per page. The `list_resources` tool accepts `top` and `skip` for pagination.
@@ -102,13 +151,8 @@ Composite-key resources (need extra args on get/update/delete): `archive_item`, 
 ## Documentation
 
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** — Install steps for Claude Desktop, Claude Code, and Cowork, plus troubleshooting.
-- **[CAPABILITIES.md](CAPABILITIES.md)** — Tool reference: operations, 30 resource types, OData query options, examples.
 - **[references/api-reference.md](references/api-reference.md)** — CloudRadial API V2 field-level schema reference.
-- **MCP server source:** [`mcp-server/`](mcp-server) — the Node project that powers the tools, bundled inside this plugin. First run installs production deps locally via `mcp-server/launch.cjs`.
-
-## Legacy: Azure Function path
-
-The `azure-mcp-server/` directory contains the previous architecture — a self-hosted Azure Function proxy that the plugin used to call via Chrome JS `fetch()`. **It is no longer required and the skills do not use it.** Partners who previously deployed the Azure Function can decommission it (it costs nothing on the consumption plan if idle, but the skills no longer call it). The directory is retained for historical reference and will be removed in a future release.
+- **MCP server source:** [`../cloudradial-ucp-mcp/`](../cloudradial-ucp-mcp) — the Node project that powers the tools.
 
 ## License
 

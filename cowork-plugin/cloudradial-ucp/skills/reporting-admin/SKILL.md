@@ -17,7 +17,7 @@ Access archives, certificates, company groups, media, tokens, and advanced API o
 
 ## How to Call the API
 
-All CloudRadial work goes through MCP tools served by the `cloudradial-ucp` server. The plugin auto-registers the server via `.claude-plugin/plugin.json` — no Azure Function, no Chrome extension, no local config file.
+All CloudRadial work goes through MCP tools served by the `cloudradial-ucp` server. The plugin auto-registers the server via `.mcp.json` — no Azure Function, no Chrome extension, no local config file.
 
 ### Before any tool call
 

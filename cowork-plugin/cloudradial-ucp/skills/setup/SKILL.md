@@ -3,213 +3,135 @@ name: setup
 description: >
   First-time setup wizard for the CloudRadial UCP plugin. Run this BEFORE any
   other CloudRadial work in a session — every other skill depends on it.
-  Triggers: "set up CloudRadial", "configure the plugin", "connect to my portal",
+  Triggers: "setup the CloudRadial plugin", "configure the plugin", "connect to my portal",
   "I just installed the CloudRadial plugin", a `setup_status` result with
   `configured: false`, or ANY CloudRadial MCP tool failing with a "credentials
   not configured" / 401 / 403 error. Also run proactively at the start of any
   CloudRadial-related conversation if you haven't checked setup_status yet.
 metadata:
-  version: "2.1.0"
+  version: "2.0.0"
 ---
 
 # CloudRadial UCP Setup Wizard
 
-The plugin ships with a local MCP server (bundled at `mcp-server/launch.cjs`) that talks to the CloudRadial API V2 on your behalf. Setup has three real questions:
+## What this plugin needs
 
-1. Is **Node.js 18+** installed on this machine? (the bundled MCP server runs on Node)
-2. Is the **MCP server reachable** to the MCP client?
-3. Are your CloudRadial API keys stored in the **OS keychain**?
+The plugin ships with a **bundled local MCP server** (inside the `.plugin` file itself) that talks to the CloudRadial API V2 on your behalf. Setup has two questions:
 
-There is no Azure Function, no Chrome extension, no separate server to deploy.
+1. Is the MCP server reachable (i.e. did the MCP client load it)?
+2. Are your CloudRadial API keys stored in the OS keychain?
 
----
-
-## Step 1 — Probe the environment
-
-Call the `setup_status` MCP tool FIRST. Don't ask the user anything until you've seen what it returns. Three outcomes:
-
-### Outcome A — Tool not available / "Unknown tool: setup_status"
-
-The MCP server isn't loaded into this client. Two possible causes: **the plugin isn't registered**, or **the MCP server crashed during spawn** (almost always because Node.js isn't installed).
-
-Don't guess — use AskUserQuestion to determine the OS, then go to Step 2.
-
-### Outcome B — Tool returns `{configured: false, ...}`
-
-MCP server is running. Read the returned `platform.platform` (`darwin` | `win32` | `linux`) to know the OS. Check `keychain.ok`. Then go to Step 3.
-
-### Outcome C — Tool returns `{configured: true, ...}`
-
-Already configured. Confirm with the `publicKeyHint` (last 4 chars of the public key) and skip to Step 4 to verify the connection still works. Don't re-collect keys unless the user explicitly says they want to rotate.
-
-If `source: "env"` (developer mode — keys set via env vars in the MCP client config), don't try to overwrite. Tell the user the env config is taking precedence and they'd need to remove those env vars first if they want to switch to keychain storage.
+There is **no Azure Function, no Chrome extension, no separate server to deploy**. The MCP server runs as a local Node process spawned by your MCP client (Claude Desktop, Claude Code, Cowork).
 
 ---
 
-## Step 2 — Prerequisites (only if MCP server isn't loaded)
+## Step 1 — Check current state
 
-### 2a. Ask the OS
+Call the `setup_status` MCP tool first. Don't ask the user any questions until you've checked.
 
-Use AskUserQuestion with options: **macOS**, **Windows**, **Linux**.
+**Three possible outcomes:**
 
-### 2b. Verify Node.js 18+ is installed
+| `setup_status` result | What it means | What to do |
+|---|---|---|
+| Tool not available / "Unknown tool" | MCP server isn't registered with the client | Go to Step 2 (register server) |
+| `{configured: false, source: null}` | Server is loaded but keys aren't stored | Go to Step 3 (collect keys) |
+| `{configured: true, source: "keychain", publicKeyHint: "...abcd"}` | Already configured | Go to Step 4 (verify) |
+| `{configured: true, source: "env"}` | Configured via env vars (developer mode) | Go to Step 4 (verify) — don't overwrite their env config |
 
-Ask the user to run, in their terminal:
+---
 
-| OS | Command |
-|---|---|
-| macOS | `node --version` (in Terminal or iTerm) |
-| Windows | `node --version` (in PowerShell or Windows Terminal) |
-| Linux | `node --version` |
+## Step 2 — Register the MCP server (if not already)
 
-Expected: `v18.x.x` or higher (v20 LTS or v22 LTS preferred). If they get "command not found" or a version below 18, walk them through install:
+If the `setup_status` tool isn't available, the MCP server isn't registered with this client. The plugin's `.mcp.json` declares it, so reinstalling/reloading the plugin usually fixes this. Tell the user:
 
-#### Install Node.js — macOS
+> "The CloudRadial MCP server isn't loaded yet. Please reload the plugin (Cowork: re-drop the `.plugin` file; Claude Code: `/plugin reload cloudradial-ucp`; Claude Desktop: restart). Then say 'Setup the CloudRadial Plugin' again."
 
-Easiest path is the official installer:
-- Visit <https://nodejs.org> and download the **LTS** `.pkg` installer.
-- Double-click → follow the prompts.
+If reinstalling doesn't help, the issue is almost always one of:
 
-Or via Homebrew, if they already have it:
-```bash
-brew install node@20
-```
-
-After installing, **open a new terminal window** and re-run `node --version`.
-
-#### Install Node.js — Windows
-
-Easiest path is the installer:
-- Visit <https://nodejs.org> and download the **LTS** `.msi` installer.
-- Run it → accept defaults → finish.
-
-Or via `winget` (built into Windows 10/11):
-```powershell
-winget install OpenJS.NodeJS.LTS
-```
-
-After installing, **close and reopen any terminals or your MCP client** so the new PATH is picked up.
-
-#### Install Node.js — Linux
-
-Use [NodeSource](https://github.com/nodesource/distributions) for the LTS:
-
-```bash
-# Debian / Ubuntu
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# Fedora / RHEL
-curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo -E bash -
-sudo dnf install -y nodejs
-```
-
-### 2c. Make sure the plugin is registered
-
-The plugin's `plugin.json` declares the MCP server under `mcpServers`. If the client doesn't show the server, try:
-
-| MCP client | What to do |
-|---|---|
-| **Cowork** | Re-drop the `.plugin` file into the Cowork window. Cowork re-registers the MCP server config on plugin install. |
-| **Claude Code** | Run `/plugin reload cloudradial-ucp`. Confirm with `claude mcp list`. |
-| **Claude Desktop (macOS)** | Cmd+Q to fully quit, then reopen. (Just closing the window leaves the daemon running.) |
-| **Claude Desktop (Windows)** | Right-click the Claude tray icon → **Quit**, then reopen. |
-| **Claude Desktop (Linux)** | Quit from the app menu, then reopen. |
-
-### 2d. Re-probe
-
-After Node is installed and the client restarted, ask the user to come back and say "set up CloudRadial" again. Then start over from Step 1.
-
-If `setup_status` is now available, continue to Step 3. If still not: the MCP server is failing to start on launch. Check the MCP client's server log for the actual error — common ones include "EACCES" (permissions), "ENOENT: node" (Node still not on PATH for that process), or a Node version that's too old. **Linux note:** if `keychain.ok` is false with an error like "could not connect to Secret Service", the user is on a headless system without `gnome-keyring` or `kwallet` running. They'll need to install one (`sudo apt-get install gnome-keyring`) and start it for the current session, OR fall back to env-var-based credentials in their MCP client config (see Step 3a).
+- **They installed the wrong OS variant of the `.plugin` file** — e.g., `windows-x64` on a Mac. Have them download the variant matching their machine.
+- **Node 18+ isn't on the MCP client's PATH.** The bundled server runs as `node server/index.mjs`. Confirm with `node --version` in a terminal; if the GUI app still can't find it, install Node system-wide and restart the client.
 
 ---
 
 ## Step 3 — Collect and store the keys
 
-Branch on the `platform.platform` value returned by `setup_status`, plus the `keychain.ok` value.
+### 3a. Find the keys
 
-### 3a. If `keychain.ok` is false
+The user gets these from their CloudRadial admin portal: **Settings → API** → Public Key + Private Key. If they don't see this menu, they don't have admin access — direct them to whoever does.
 
-The OS keychain isn't usable on this machine. This is essentially never an issue on macOS or Windows — those backends are always available. It does happen on Linux (no libsecret daemon, headless SSH, container, etc.).
-
-Tell the user:
-
-> "The MCP server can't reach an OS keychain on this Linux system (error: *{keychain.error}*). Two options:
->
-> 1. **Install and start a Secret Service provider** — usually `gnome-keyring` (`sudo apt-get install gnome-keyring`, then log out/in) or `kwallet` for KDE.
-> 2. **Skip the keychain and use environment variables** — add `CLOUDRADIAL_PUBLIC_KEY` and `CLOUDRADIAL_PRIVATE_KEY` to your MCP client config under the `env` block for this server. Then restart the client. The server reads env vars first if set."
-
-Stop the wizard until they pick a path. If they choose option 2, walk them through editing their config and re-checking `setup_status`.
-
-### 3b. Find the keys
-
-The user gets these from their CloudRadial admin portal: **Settings → API** → Public Key + Private Key. If the menu isn't visible, they don't have admin access — direct them to whoever does.
-
-### 3c. Privacy note (state once, before asking)
+### 3b. Privacy note (state this once, before asking)
 
 Tell the user, verbatim or close:
 
-> "I need your CloudRadial public and private keys. Once I have them, they go straight into your **{keychainBackend}** — encrypted at rest, accessible only to your user account. **But** when you paste them here, the keys will briefly appear in this conversation's transcript. If you'd rather avoid that, you can instead set them as environment variables in your MCP client config (`CLOUDRADIAL_PUBLIC_KEY`, `CLOUDRADIAL_PRIVATE_KEY`) and skip this wizard. Continue?"
+> "I'll need your CloudRadial public and private keys. Once I store them, they go straight into your OS keychain (Windows Credential Manager / macOS Keychain / Linux libsecret) — encrypted at rest, accessible only to your user account. **However:** when you paste them here, the keys will briefly appear in this conversation's transcript. If you'd rather avoid that, you can instead set them as environment variables in your MCP client config (`CLOUDRADIAL_PUBLIC_KEY`, `CLOUDRADIAL_PRIVATE_KEY`) and skip this wizard. Continue?"
 
-Substitute `{keychainBackend}` with the value from `setup_status.platform.keychainBackend` ("macOS Keychain", "Windows Credential Manager", or "libsecret / Secret Service").
+If the user wants the env-var path, point them at the README and stop. Otherwise continue.
 
-### 3d. Ask for the keys
+### 3c. Ask for the keys
 
-Use `AskUserQuestion` for each so the keys arrive through the structured-input UI rather than as a normal chat message:
+Use `AskUserQuestion` for each so the keys are entered through the structured input UI rather than as a regular chat message:
 
 - **Question 1:** "Paste your CloudRadial **public key**."
 - **Question 2:** "Paste your CloudRadial **private key**."
-- **Question 3 (only if their portal isn't on the US default):** "Which CloudRadial region?" Options: `https://api.us.cloudradial.com` (US), `https://api.eu.cloudradial.com` (EU), `Other`.
+- **Question 3 (only if non-default):** "Which CloudRadial region? Default is US." Options: `https://api.us.cloudradial.com` (US), `https://api.eu.cloudradial.com` (EU), `Other`.
 
-### 3e. Store via the MCP tool
+### 3d. Store via the MCP tool
 
-Call `configure_credentials` with `public_key`, `private_key`, and `base_url` (if EU or Other). The tool:
+Call `configure_credentials` with `public_key`, `private_key`, and `base_url` (if they chose EU or Other). The tool will:
 
-1. Makes a live `GET /v2/odata/company/$count` against CloudRadial to validate.
-2. If validation passes → writes to the OS keychain.
-3. If validation fails (401/403) → returns an error WITHOUT writing. Ask the user to re-check the keys and try again.
+1. Make a live `GET /v2/odata/company/$count` against CloudRadial to validate the keys.
+2. If validation passes, write them to the OS keychain.
+3. If validation fails (401/403), it returns an error WITHOUT writing — ask the user to re-check the keys and try again.
 
-**Do not log, echo, or repeat the keys back** in your reply. The tool returns `publicKeyHint` (last 4 chars only) after success — use that for confirmation.
+**Do not log, echo, or repeat the keys back** in your reply. After a successful call, the tool returns `publicKeyHint` (last 4 chars only) — use that for confirmation.
 
 ---
 
-## Step 4 — Verify end-to-end
+## Step 4 — Verify
 
-Make one real call to prove the full stack works:
+Make one real call to prove end-to-end works:
 
-- Call `search_companies` with `name: "a"` (broad search).
+- Call the `search_companies` tool with `name: "a"` (broad search).
 - Expected: a small array of company objects.
 
-### If it succeeds
+**If it succeeds:** Confirm, then offer a one-click starter menu so a non-technical user can act immediately.
 
-Confirm with the platform-aware summary, substituting `{label}`, `{keychainBackend}`, and `{publicKeyHint}` from `setup_status`:
+First confirm using the `publicKeyHint` from `setup_status`:
 
-> "You're all set on **{label}**. Credentials stored in **{keychainBackend}** (public key ends in `...{publicKeyHint}`). Here are some things I can do — *Look up [company name]*, *Give me an overview of company [id]*, *Audit the portal for [company]*, etc."
+> "You're all set — your CloudRadial keys are stored securely in this computer's keychain (public key ends in `...{hint}`), and I just confirmed the connection works."
 
-### If it fails
+Then present a starter menu with the `AskUserQuestion` tool (header "Get started", single-select) so the user can pick an action with one click instead of having to know what to type. Offer these four options, and after they pick, hand off to the matching skill and actually run the workflow:
 
-Surface the exact error from the MCP tool. Common issues:
+| Option label | What you do when picked |
+|---|---|
+| **Update warranty dates** | Ask which company (or a specific serial number). Use the **endpoint-reporting** skill: list the company's endpoints, then call `endpoint_update_warranty` for each serial that needs a refresh. |
+| **Create an assessment** | Ask which company and what kind of assessment. Use the **content-management** skill to `create_resource` an `assessment` for that company. |
+| **Build a training course** | Ask for the source — a topic to describe, a document, or a YouTube link. If it's a video/document, you read and summarize the source yourself, then use the **course-management** skill to create the `course` and its `course_lesson`s. (Reading the video is your own capability — the plugin just stores the resulting course.) |
+| **Track flexible assets** | Ask which company. Use the **assessment-compliance** skill to review existing `flexible_asset` records, or `create_resource` new ones. (Note: this creates/tracks flexible assets in CloudRadial — it does not import from ITGlue; that's a separate standalone script.) |
+
+The `AskUserQuestion` tool always adds an "Other" choice automatically — if the user types a free-form request instead of picking one, just do that. Don't block them into only these four.
+
+**If it fails after Step 3:** Surface the exact error from the MCP tool. Common issues:
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | 401/403 from CloudRadial | Wrong keys | Re-run Step 3 with corrected keys |
-| Network error / DNS | Wrong base URL | Re-run Step 3 with the correct region |
-| Tool returns "credentials not configured" right after writing | Keychain write silently failed | Re-check `setup_status.keychain.ok` and `.error`; switch to env-var config (Step 3a, option 2) |
+| Network error / DNS | Wrong base URL | Re-run with the correct region |
+| Tool returns "credentials not configured" | Keychain write silently failed (rare; SSH/headless Linux without libsecret) | Tell user to set `CLOUDRADIAL_PUBLIC_KEY` / `CLOUDRADIAL_PRIVATE_KEY` env vars in their MCP client config as a fallback |
 
 ---
 
 ## Reconfiguring
 
-To rotate keys or switch portals: re-run this wizard. `configure_credentials` overwrites whatever's in the keychain.
+To rotate keys or switch portals: just re-run this wizard. `configure_credentials` overwrites whatever's in the keychain.
 
-To remove the credentials entirely: call the `clear_credentials` tool. This only clears the keychain — env-var-based config is unaffected.
+To remove the credentials entirely: call the `clear_credentials` tool. Note this only clears the keychain — env-var-based config is unaffected.
 
 ---
 
 ## What you should NEVER do in this skill
 
-- Don't read or write any `.cloudradial/config.json` file. That was the old (Azure Function) flow. Credentials now live only in the OS keychain or env vars.
+- Don't read or write any `.cloudradial/config.json` file. That was the old (Azure Function) flow. Credentials now live only in the OS keychain.
 - Don't try to run `az`, `func`, `git clone`, or any Azure commands. There is no Azure Function in this version of the plugin.
 - Don't log the user's keys back to them in chat, even partially. Use `publicKeyHint` from `setup_status` for confirmation.
 - Don't proceed with other CloudRadial work in the same turn if setup fails — fix setup first.
-- Don't assume the platform — always read `setup_status.platform.platform` if the tool is available, or ask via AskUserQuestion if it isn't.
