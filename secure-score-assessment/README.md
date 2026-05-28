@@ -1,5 +1,16 @@
 # Secure Score to Assessment — Import Microsoft Secure Scores as CloudRadial Assessments
 
+This folder contains two scripts that solve the same problem in different ways:
+
+| Script | How It Works | Best For |
+|--------|-------------|----------|
+| `Convert-SecureScoreToAssessment.ps1` | Reads an exported .xlsx file from CloudRadial's Secure Score page | Quick one-off imports, no Azure AD setup required |
+| `Import-SecureScoreAssessment.ps1` | Pulls Secure Score directly from Microsoft Graph API | Automation, scheduled runs, multi-tenant environments |
+
+Both produce the same CloudRadial Assessment import file — pick whichever fits your workflow.
+
+---
+
 ## Why This Matters
 
 Microsoft Secure Score gives you a detailed breakdown of a tenant's security posture — what's enabled, what's missing, and how much each gap affects the overall score. But there's no built-in way to get that data into CloudRadial as an Assessment that you can present to clients, track over time, or use to drive remediation conversations.
@@ -7,6 +18,10 @@ Microsoft Secure Score gives you a detailed breakdown of a tenant's security pos
 Without this script, you'd need to manually create each assessment question, copy over each improvement action, set the compliance status, and calculate risk — for potentially hundreds of items. That's hours of copy-paste work per tenant.
 
 This script automates the entire conversion. Export Secure Scores from the CloudRadial portal, run the script, and import the result as an Assessment. Every improvement action becomes an assessment question with the correct compliance status, risk level, and pre-written notes — ready for your next client review.
+
+---
+
+# Option A: Convert from CloudRadial Export (`Convert-SecureScoreToAssessment.ps1`)
 
 ## Who This Is For
 
@@ -156,6 +171,136 @@ Check the `Status` column in your Secure Score export. The script expects boolea
 
 **Categories appear in unexpected order**
 The script sorts by: Identity → Device → Apps → Data. If your export contains a category not in this list, it sorts to the end. Add it to the `$categoryOrder` hashtable in the Configuration section.
+
+---
+
+# Option B: Pull Directly from Microsoft Graph (`Import-SecureScoreAssessment.ps1`)
+
+This script skips the manual export entirely. It authenticates to Microsoft Graph, pulls the latest Secure Score data for any tenant you have access to, and generates the same CloudRadial Assessment import file.
+
+## What You'll Need (Graph Version)
+
+- PowerShell 5.1 or later
+- The [ImportExcel](https://github.com/dfinke/ImportExcel) module (auto-installs if missing)
+- An Azure AD app registration with:
+  - **SecurityEvents.Read.All** application permission
+  - Admin consent granted (for the target tenant)
+- The tenant ID, client ID, and client secret from the app registration
+
+## Setting Up the Azure AD App Registration
+
+This is a one-time setup. Once done, you can run the script against any tenant where the app has been consented.
+
+1. Go to [Azure Portal](https://portal.azure.com) > **Azure Active Directory** > **App registrations**
+2. Click **New registration**
+   - Name: `CloudRadial Secure Score Reader` (or similar)
+   - Supported account types: **Accounts in any organizational directory** (for multi-tenant)
+   - Redirect URI: leave blank
+3. Click **Register**
+4. Copy the **Application (client) ID** — this is your `-ClientId`
+5. Go to **Certificates & secrets** > **New client secret**
+   - Description: `Secure Score Script`
+   - Expiry: choose your preference
+   - Copy the **Value** immediately — this is your client secret
+6. Go to **API permissions** > **Add a permission** > **Microsoft Graph** > **Application permissions**
+   - Search for and add: `SecurityEvents.Read.All`
+7. Click **Grant admin consent** for your organization
+
+For multi-tenant use, each client tenant's admin must also grant consent. You can construct a consent URL:
+
+```
+https://login.microsoftonline.com/{client-tenant-id}/adminconsent?client_id={your-app-client-id}
+```
+
+## Step 1: Store Your Client Secret
+
+Set it as an environment variable so the script doesn't prompt each time:
+
+**Windows (PowerShell):**
+```powershell
+$env:GRAPH_CLIENT_SECRET = "your-client-secret-value"
+```
+
+Or pass it directly with `-ClientSecret` (not recommended for shared scripts or logs).
+
+## Step 2: Do a Dry Run
+
+```powershell
+.\Import-SecureScoreAssessment.ps1 -TenantId "contoso.onmicrosoft.com" `
+    -ClientId "12345678-abcd-1234-abcd-123456789012" -WhatIf
+```
+
+This authenticates, pulls the data, and shows you a summary without writing any file. You'll see the tenant's current score, control count, compliance breakdown, and category summary.
+
+## Step 3: Generate the Assessment Import File
+
+```powershell
+.\Import-SecureScoreAssessment.ps1 -TenantId "contoso.onmicrosoft.com" `
+    -ClientId "12345678-abcd-1234-abcd-123456789012"
+```
+
+The script creates `Assessment-SecureScore-contoso.onmicrosoft.com-20260527.xlsx` in the current directory.
+
+To customize:
+
+```powershell
+.\Import-SecureScoreAssessment.ps1 -TenantId "contoso.onmicrosoft.com" `
+    -ClientId "12345678-abcd-1234-abcd-123456789012" `
+    -AssessmentName "Contoso Q2 2026 Security Review" `
+    -OutputFile "C:\Assessments\Contoso-Security.xlsx"
+```
+
+## Step 4: Import into CloudRadial
+
+Same as Option A — upload the generated .xlsx via **Content** > **Assessments** > **Import**.
+
+## Multi-Tenant Usage
+
+Run the script for each client tenant by changing `-TenantId`:
+
+```powershell
+$clientId = "12345678-abcd-1234-abcd-123456789012"
+
+# Contoso
+.\Import-SecureScoreAssessment.ps1 -TenantId "contoso.onmicrosoft.com" -ClientId $clientId
+
+# Fabrikam
+.\Import-SecureScoreAssessment.ps1 -TenantId "fabrikam.onmicrosoft.com" -ClientId $clientId
+
+# Woodgrove
+.\Import-SecureScoreAssessment.ps1 -TenantId "woodgrove.onmicrosoft.com" -ClientId $clientId
+```
+
+Each generates its own import file. The app registration only needs to exist once — it works across any tenant that has granted consent.
+
+## What's Different from the Export Version
+
+The Graph version pulls a few extra fields that the export doesn't include:
+
+- **Remediation** and **Remediation Summary** — Microsoft's recommended fix description, auto-populated from the API
+- **Deprecated controls** — automatically filtered out (the export may still include them)
+- **Infrastructure** category — the API includes this as a fifth category alongside Identity, Device, Apps, and Data
+
+The assessment format and field mappings are otherwise identical.
+
+## Troubleshooting (Graph Version)
+
+**"Unauthorized (401)"**
+Your client secret may be expired or incorrect. Regenerate it in Azure Portal > App registrations > Certificates & secrets.
+
+**"Forbidden (403)"**
+The app doesn't have the `SecurityEvents.Read.All` permission, or admin consent hasn't been granted for this tenant.
+
+**"No Secure Score data found"**
+Microsoft Secure Score needs time to generate data for a tenant. If this is a brand new tenant or Secure Score was just enabled, wait 24-48 hours and try again.
+
+**"Rate limited (429)"**
+The script handles this automatically with exponential backoff and retries. If it persists, wait a few minutes and try again.
+
+**Controls missing compared to the portal**
+Deprecated controls are filtered out by default. The API may also lag slightly behind the portal. If a specific control is missing, check `$_.deprecated` in the raw data.
+
+---
 
 ## Support
 
