@@ -1,15 +1,18 @@
 ---
 name: setup
 description: >
-  First-time setup wizard for the CloudRadial UCP plugin. Run this BEFORE any
-  other CloudRadial work in a session — every other skill depends on it.
-  Triggers: "setup the CloudRadial plugin", "configure the plugin", "connect to my portal",
-  "I just installed the CloudRadial plugin", a `setup_status` result with
-  `configured: false`, or ANY CloudRadial MCP tool failing with a "credentials
-  not configured" / 401 / 403 error. Also run proactively at the start of any
-  CloudRadial-related conversation if you haven't checked setup_status yet.
+  First-time setup wizard AND welcome tour for the CloudRadial UCP plugin.
+  Run this BEFORE any other CloudRadial work in a session — every other skill
+  depends on it.
+  Triggers: "setup the CloudRadial plugin", "configure the plugin", "connect to
+  my portal", "I just installed the CloudRadial plugin", "what does the
+  CloudRadial plugin do", "tour the plugin", "show me the welcome", a
+  `setup_status` result with `configured: false`, or ANY CloudRadial MCP tool
+  failing with a "credentials not configured" / 401 / 403 error. Also run
+  proactively at the start of any CloudRadial-related conversation if you
+  haven't checked setup_status yet.
 metadata:
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # CloudRadial UCP Setup Wizard
@@ -22,6 +25,44 @@ The plugin ships with a **bundled local MCP server** (inside the `.plugin` file 
 2. Are your CloudRadial API keys stored in the OS keychain?
 
 There is **no Azure Function, no Chrome extension, no separate server to deploy**. The MCP server runs as a local Node process spawned by your MCP client (Claude Desktop, Claude Code, Cowork).
+
+---
+
+## Step 0 — Brand intro + plugin tour (do this FIRST on the first run)
+
+The very first thing this wizard does in a conversation is show the user a branded welcome with the four headline things the plugin can do, then let them pick what to see next. Skip this step if you've already shown it earlier in the current conversation.
+
+### 0a. Render the brand intro exactly as below
+
+Output the following block verbatim (preserve emoji, blockquote, bold, and indentation — this is the closest we can get to "brand colors" inside the chat renderer):
+
+> ☁️📡 **CloudRadial UCP**
+>
+> *The AI-Powered Service Delivery & Client Success Platform — right inside Claude.*
+>
+> Once it's set up, just ask in plain English. Here's what's included:
+>
+> - 🔍 **Look things up** — companies, users, endpoints, articles, feedback, and 30+ resource types
+> - 📝 **Create content & training** — KB articles, assessments, courses & lessons (even from a YouTube link)
+> - 🔧 **Maintain the portal** — refresh endpoint warranty, flexible-asset tracking, services, tokens
+> - 🤖 **Talk to your portal** — no scripts, no API tools, no copy-pasting keys
+
+### 0b. Present the tour menu (interactive "buttons")
+
+Immediately after the intro, call `AskUserQuestion` (header **"Get started"**, single-select) with these four options:
+
+| Option label | What you do when picked |
+|---|---|
+| **Set up credentials now (Recommended)** | Proceed straight to Step 1 (status check) — this is the primary install path. |
+| **Show me example commands** | Paste the three category cards from the README's "What you can do" (🔎 / 📝 / 🔧), each with 3–4 sample prompts. Then re-display this tour menu so they can keep exploring. |
+| **List all 11 skills** | Show the skill table from the README ("Skills (11)") — name + one-line description for each. Then re-display this tour menu. |
+| **List all 17 MCP tools** | Show the tool table from the README ("MCP tools (17)") — name + one-line purpose. Then re-display this tour menu. |
+
+If the user types something free-form instead of picking, just do what they asked (the `Other` choice is always implicit). If they want to bail entirely, that's fine — don't push.
+
+### 0c. Don't repeat the intro
+
+Once Step 0 has run in a conversation, do NOT re-render the brand block on subsequent invocations of this wizard — go straight to Step 1.
 
 ---
 
