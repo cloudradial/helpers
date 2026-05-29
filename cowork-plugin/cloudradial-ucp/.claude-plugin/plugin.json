@@ -1,9 +1,23 @@
 {
   "name": "cloudradial-ucp",
+  "displayName": "CloudRadial UCP",
   "version": "2.1.0",
-  "description": "Connect Claude to your CloudRadial UCP Portal via a local MCP server. After installing, say 'Setup the CloudRadial Plugin' — the wizard will store your API keys in the OS keychain and you're ready to go.",
+  "description": "☁️📡 CloudRadial UCP — the AI-powered service delivery & client success platform, right inside Claude. Look up companies, manage articles/assessments/courses, refresh endpoint warranty, and work with 30+ CloudRadial resource types in plain English. After installing, say \"Setup the CloudRadial Plugin\" for a quick tour and one-step credential setup.",
   "author": {
     "name": "Nick Westgate"
   },
+  "homepage": "https://www.cloudradial.com",
+  "license": "MIT",
+  "keywords": [
+    "cloudradial",
+    "ucp",
+    "msp",
+    "managed-services",
+    "service-delivery",
+    "ai",
+    "automation",
+    "claude",
+    "mcp"
+  ],
   "repository": "https://github.com/cloudradial/helpers/tree/main/cowork-plugin/cloudradial-ucp"
 }
