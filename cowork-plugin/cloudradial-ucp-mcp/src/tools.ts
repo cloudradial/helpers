@@ -201,7 +201,7 @@ export const tools: ToolDefinition[] = [
   {
     name: "list_resources",
     description:
-      "List any of 30 resource types with OData filtering, sorting, and pagination. Resource API caps each page at 200. Note: application_user has no OData listing and will error here — use get_resource instead.",
+      "List any of 30 resource types with OData filtering, sorting, and pagination. ALWAYS paginates: defaults to top=100 if not specified to avoid hammering the API. Resource API caps each page at 200. To get more, increment `skip` (page through) or pair with `count_resources` to know the total. Note: application_user has no OData listing and will error here — use get_resource instead.",
     inputSchema: {
       type: "object",
       properties: {
@@ -209,8 +209,8 @@ export const tools: ToolDefinition[] = [
         filter:  { type: "string", description: "OData $filter expression" },
         select:  { type: "string", description: "OData $select (comma-separated field list)" },
         orderby: { type: "string", description: "OData $orderby (e.g. 'dateCreated desc')" },
-        top:     { type: "string", description: "OData $top (max 200)" },
-        skip:    { type: "string", description: "OData $skip for pagination" },
+        top:     { type: "string", description: "OData $top — page size. Defaults to 100, max 200." },
+        skip:    { type: "string", description: "OData $skip — offset for pagination (use with top to walk pages)." },
         expand:  { type: "string", description: "OData $expand" },
         search:  { type: "string", description: "OData $search" },
       },
@@ -221,11 +221,15 @@ export const tools: ToolDefinition[] = [
       if (!config.odataPath) {
         throw new Error(`${resourceType} does not support listing (no OData endpoint). Use get_resource with a specific ID.`);
       }
+      // Default $top to 100 if the caller didn't specify one — pagination by
+      // default avoids accidentally fetching huge result sets that could
+      // throttle or block at the CloudRadial side. Callers can override
+      // with explicit `top` (max 200) and walk pages via `skip`.
       const query: Record<string, string | undefined> = {
         $filter: str(args, "filter"),
         $select: str(args, "select"),
         $orderby: str(args, "orderby"),
-        $top: str(args, "top"),
+        $top: str(args, "top") ?? "100",
         $skip: str(args, "skip"),
         $expand: str(args, "expand"),
         $search: str(args, "search"),
