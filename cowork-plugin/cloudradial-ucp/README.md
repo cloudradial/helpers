@@ -91,19 +91,21 @@ There is **no Azure Function**, no Chrome extension, no separate server to deplo
 
 ## Skills (11)
 
+Each skill below has a partner-facing **README** with example prompts to try. Click the skill name for its guide.
+
 | Skill | What it does |
 |-------|--------------|
-| **setup** | First-time setup wizard — validates and stores credentials in the OS keychain |
-| **portal-setup** | Guide partners through portal implementation: 5-session process, LOMG assessment, 8 CSA pain point playbooks, content seeding |
-| **portal-lookup** | Look up companies, check portal status, assess LOMG lifecycle stage, prepare for meetings |
-| **content-management** | Create and manage articles, catalogs, menus, courses, lessons, and assessments |
-| **user-management** | Look up users by email/name, list users by company, analyze user adoption |
-| **endpoint-reporting** | List endpoints, warranty reports, device inventory, application audits |
-| **course-management** | Create courses and lessons, check enrollments, manage training content |
-| **assessment-compliance** | Review security assessments, compliance tracking, flexible asset management |
-| **feedback-analysis** | Analyze user feedback, CSAT trends, satisfaction reporting |
-| **service-management** | Services, service installs, domains, products, coverage analysis |
-| **reporting-admin** | Archives, certificates, company groups, media, tokens, raw API access |
+| **[setup](skills/setup/README.md)** | First-run plugin setup + branded welcome tour — validates and stores credentials in the OS keychain |
+| **[portal-setup](skills/portal-setup/README.md)** | Walk a client through their 5-session CloudRadial implementation; 8 CSA pain-point playbooks; content seeding |
+| **[portal-lookup](skills/portal-lookup/README.md)** | Look up companies, check portal status, assess LOMG lifecycle stage, prepare for meetings |
+| **[content-management](skills/content-management/README.md)** | Create and manage articles, catalogs, menus, courses, lessons, and assessments |
+| **[user-management](skills/user-management/README.md)** | Look up users by email/name, list users by company, analyze user adoption |
+| **[endpoint-reporting](skills/endpoint-reporting/README.md)** | List endpoints, warranty reports, device inventory, application audits |
+| **[course-management](skills/course-management/README.md)** | Create training courses and lessons (from a topic, document, or YouTube link); check enrollments |
+| **[assessment-compliance](skills/assessment-compliance/README.md)** | Review security assessments, compliance tracking, flexible-asset management |
+| **[feedback-analysis](skills/feedback-analysis/README.md)** | Analyze user feedback, CSAT trends, satisfaction reporting |
+| **[service-management](skills/service-management/README.md)** | Services, service installs, domains, products, coverage analysis |
+| **[reporting-admin](skills/reporting-admin/README.md)** | Archives, certificates, company groups, media, tokens, raw API access |
 
 ## MCP tools (17)
 
