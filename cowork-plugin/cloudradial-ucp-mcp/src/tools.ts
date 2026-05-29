@@ -147,7 +147,9 @@ export const tools: ToolDefinition[] = [
         $select: "companyId,name,psaIdentifier,endpointCount",
         $top: "50",
       });
-      return result.data;
+      // Unwrap OData envelope ({"@odata.context": ..., "value": [...]}) so
+      // callers get the array its description promises.
+      return (result.data as { value?: unknown })?.value ?? result.data;
     },
   },
 
@@ -229,7 +231,9 @@ export const tools: ToolDefinition[] = [
         $search: str(args, "search"),
       };
       const result = await callApi("GET", `/v2/odata/${config.odataPath}`, query);
-      return result.data;
+      // Unwrap OData envelope so callers get a clean array. If the partner
+      // wants pagination metadata, count_resources / $count is the way.
+      return (result.data as { value?: unknown })?.value ?? result.data;
     },
   },
 
@@ -386,7 +390,19 @@ export const tools: ToolDefinition[] = [
         path = `/v2/${config.itemPath}/${id}`;
       }
 
-      const result = await callApi(method, path, undefined, data);
+      // CloudRadial's PATCH endpoints expect an RFC 6902 JSON Patch document,
+      // not a plain partial object. Convert {field: value, ...} → an array of
+      // replace ops so partners can pass a partial object as documented.
+      // PUT (full replace) is sent through as-is.
+      const body =
+        method === "PATCH"
+          ? Object.entries(data).map(([key, value]) => ({
+              op: "replace",
+              path: `/${key}`,
+              value,
+            }))
+          : data;
+      const result = await callApi(method, path, undefined, body);
       return result.data;
     },
   },
@@ -476,7 +492,8 @@ export const tools: ToolDefinition[] = [
         $filter: filters.join(" and "),
         $top: top,
       });
-      return result.data;
+      // Unwrap OData envelope so callers get a clean array.
+      return (result.data as { value?: unknown })?.value ?? result.data;
     },
   },
 
