@@ -88,7 +88,26 @@ export async function callApi(
   const contentType = resp.headers.get("content-type") || "";
   let data: unknown;
   if (contentType.includes("application/json")) {
-    data = await resp.json();
+    const parsed = (await resp.json()) as unknown;
+    // CloudRadial wraps single-resource and write responses in a standard
+    // success envelope: { data, success, message }. Unwrap it so callers
+    // see the resource directly, matching the tool descriptions.
+    // OData collection responses ({ "@odata.context", value: [...] }) are a
+    // different shape and pass through here — they're unwrapped per-handler
+    // (search_companies / list_resources / user_lookup) to `.value`.
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed) &&
+      "data" in parsed &&
+      "success" in parsed &&
+      !("@odata.context" in parsed) &&
+      !("value" in parsed)
+    ) {
+      data = (parsed as { data: unknown }).data;
+    } else {
+      data = parsed;
+    }
   } else {
     const text = await resp.text();
     const num = Number(text);

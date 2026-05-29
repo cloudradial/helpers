@@ -49,7 +49,7 @@ Call `setup_status` first to confirm credentials are stored. If it returns `conf
 
 ### OData parameter conventions
 
-For `list_resources` and `count_resources`, pass OData parameters **without** the leading `$`: `filter`, `select`, `orderby`, `top`, `skip`, `expand`, `search`. The server adds the `$` when forwarding. Page size caps at 200 — paginate with `top` + `skip`.
+For `list_resources` and `count_resources`, pass OData parameters **without** the leading `$`: `filter`, `select`, `orderby`, `top`, `skip`, `expand`, `search`. The server adds the `$` when forwarding. Defaults to `top=100` if unspecified (pagination by default to avoid hammering the API). Max page is 200; walk through larger pages by incrementing `skip`.
 
 ### Field-name quirks
 
