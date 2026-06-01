@@ -1,102 +1,82 @@
-# CloudRadial UCP Plugin Install
-
-This folder contains the shareable CloudRadial UCP plugin package:
-
-```text
-cloudradial-ucp.plugin
-```
-
-## What It Does
-
-CloudRadial UCP connects Cowork, Claude, or Codex to a CloudRadial portal through a local MCP server. It can look up companies, users, endpoints, articles, feedback, services, courses, assessments, and other CloudRadial API V2 resources.
-
-The plugin does not require an Azure Function, browser extension, or separate hosted service.
-
-## Requirements
-
-- Node.js 18 or newer
-- CloudRadial API public and private keys
-- Network access to CloudRadial API V2
-
-Credential storage uses the local OS keychain:
-
-| OS | Credential store |
-| --- | --- |
-| Windows | Windows Credential Manager |
-| macOS | macOS Keychain |
-| Linux | libsecret / Secret Service |
-
-Linux systems need a running Secret Service provider such as `gnome-keyring` or `kwallet`.
-
-## Install In Cowork
-
-1. Open Cowork.
-2. Drag `cloudradial-ucp.plugin` into the Cowork window.
-3. Approve the plugin install when prompted.
-4. Start a new conversation and say:
-
-   ```text
-   Set up CloudRadial
-   ```
-
-5. Follow the setup wizard to enter your CloudRadial API keys.
-
-## Install In Claude
-
-For Claude Desktop or Claude Code, install the plugin using the normal plugin install flow, then restart or reload the client so the MCP server is registered.
-
-After install, start a new conversation and say:
-
-```text
-Set up CloudRadial
-```
-
-## Install In Codex
-
-Codex plugin support is intended for local development. If you are installing this as a Codex local plugin, add it through your configured local marketplace or plugin install flow, then start a new thread after install so Codex reloads the plugin tools.
-
-## Setup Notes
-
-During setup, the plugin asks for:
-
-- CloudRadial public key
-- CloudRadial private key
-- Region, if not using the US default
-
-Default API URL:
-
-```text
-https://api.us.cloudradial.com
-```
-
-EU API URL:
-
-```text
-https://api.eu.cloudradial.com
-```
-
+CloudRadial Codex Plugin
+A Claude Code / Codex plugin that connects your AI assistant to the CloudRadial UCP
+Portal via a local MCP server. Query companies, users, endpoints, articles, feedback, and
+27 other resource types — including full read/write support — directly from your AI
+conversations.
+What’s here
+• cloudradial-codex/ — the plugin itself: 11 skills covering portal lookup, content
+management, endpoint reporting, course management, assessment compliance,
+feedback analysis, service management, reporting/admin, and an interactive setup
+wizard. The MCP server (@cloudradial/ucp-mcp) is bundled inside at cloudradialcodex/mcp-server/ so partners get a single drag-and-drop install — no Azure
+deployment, no Chrome extension, no separate server to host.
+Quick start
+For partners installing the plugin:
+1. Download the latest .plugin from GitHub Releases.
+2. Install using the normal plugin install flow (drag into Cowork, /plugin install in
+Claude Code, or install via gallery in Claude Desktop), then restart or reload the
+client so the MCP server is registered.
+3. In a new conversation, say “Set up CloudRadial.” The setup wizard collects your
+API keys, validates them with a live call, and stores them encrypted in your OS
+keychain.
+4. Start using it — “Look up Acme Corp”, “Give me an overview of company 42”,
+“Create a KB article about password resets”, etc.
+The first MCP tool call after install takes ~10 seconds while the bundled MCP server installs
+its production dependencies locally; subsequent calls are instant.
+For developers / contributors:
+git clone https://github.com/cloudradial/helpers.git
+cd helpers/codex-plugin/cloudradial-codex/mcp-server
+npm install
+npm run build
+Then point your MCP client at cloudradial-codex/mcp-server/launch.cjs (see
+DEPLOYMENT.md for client-specific config).
+Requirements
+• Node.js 18 or newer
+• CloudRadial API public and private keys
+• Network access to CloudRadial API V2
+Credential storage uses the local OS keychain (Windows Credential Manager, macOS
+Keychain, or libsecret / Secret Service on Linux). Linux systems need a running Secret
+Service provider such as gnome-keyring or kwallet.
+Architecture at a glance
+You in Claude Code / Codex
+ |
+ | MCP tool calls (stdio JSON-RPC)
+ v
+mcp-server/launch.cjs (auto-installs deps on first run)
+ |
+ | spawns
+ v
+mcp-server/dist/index.js (the MCP server)
+ |
+ | HTTPS + HTTP Basic auth (keys from OS keychain)
+ v
+CloudRadial API V2
+Documentation
+• cloudradial-codex/README.md — plugin overview: skills, MCP tools, supported
+resources.
+• cloudradial-codex/DEPLOYMENT.md — install steps for Cowork, Claude Code, and
+Claude Desktop, plus troubleshooting.
+• cloudradial-codex/CAPABILITIES.md — tool reference with examples.
+• cloudradial-codex/mcp-server/README.md — MCP server details (for developers).
+• cloudradial-codex/references/api-reference.md — CloudRadial API V2 fieldlevel schema reference.
+Setup notes
+During setup, the plugin asks for your CloudRadial public key and private key. If your portal
+is not in the US region, you will also be asked for the region.
+Default API URL: https://api.us.cloudradial.com
+EU API URL: https://api.eu.cloudradial.com
 The setup wizard validates credentials with CloudRadial before storing them.
-
-## Privacy Note
-
-If you paste API keys into chat during setup, they may briefly appear in the conversation transcript. To avoid that, configure these environment variables in the MCP client instead:
-
-```text
+Privacy note
+If you paste API keys into chat during setup, they may briefly appear in the conversation
+transcript. To avoid that, configure these environment variables in the MCP client instead:
 CLOUDRADIAL_PUBLIC_KEY
 CLOUDRADIAL_PRIVATE_KEY
 CLOUDRADIAL_BASE_URL
-```
-
 Environment variables take precedence over keychain credentials.
-
-## First Launch
-
-The first tool call may take a few seconds while the plugin installs production npm dependencies locally. The launcher validates the actual dependency files before starting, including the native keyring binding, so partial npm installs are repaired automatically.
-
-## Troubleshooting
-
-- If `Set up CloudRadial` does not expose setup tools, restart or reload the MCP client.
-- If Node is missing, install the Node.js LTS release from `https://nodejs.org`.
-- If Linux keychain setup fails, install and start `gnome-keyring` or `kwallet`, or use environment variables.
-- If CloudRadial rejects credentials, re-check the public and private keys in the CloudRadial admin portal.
-
+Troubleshooting
+• If Set up CloudRadial does not expose setup tools, restart or reload the MCP client.
+• If Node is missing, install the Node.js LTS release from https://nodejs.org.
+• If Linux keychain setup fails, install and start gnome-keyring or kwallet, or use
+environment variables.
+• If CloudRadial rejects credentials, re-check the public and private keys in the
+CloudRadial admin portal.
+License
+MIT
