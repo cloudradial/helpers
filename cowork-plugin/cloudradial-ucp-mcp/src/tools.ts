@@ -337,9 +337,10 @@ export const tools: ToolDefinition[] = [
     },
     handler: async (args) => {
       const { resourceType, config } = requireResource(args);
-      if (!config.itemPath) throw new Error(`create is not supported for ${resourceType}`);
-      const data = (args.data as Record<string, unknown>) || {};
-      const result = await callApi("POST", `/v2/${config.itemPath}`, undefined, data);
+            if (!config.itemPath && !config.createPath) throw new Error(`create is not supported for ${resourceType}`);
+            const data = (args.data as Record<string, unknown>) || {};
+            const createPath = config.createPath || config.itemPath;
+            const result = await callApi("POST", `/v2/${createPath}`, undefined, data);
       return result.data;
     },
   },
@@ -637,7 +638,8 @@ export const tools: ToolDefinition[] = [
               .map(([k, v]) => [k, String(v)])
           )
         : undefined;
-      const body = ["POST", "PUT", "PATCH"].includes(method) ? args.body : undefined;
+            let body: unknown = ["POST", "PUT", "PATCH"].includes(method) ? args.body : undefined;
+            if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { /* leave as-is */ } }
       const result = await callApi(method, path, query, body);
       return result.data;
     },
