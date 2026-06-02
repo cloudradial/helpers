@@ -2,24 +2,13 @@
 
 > Review security assessments and track compliance — all from a chat prompt.
 
-<table>
-<tr>
-<td width="50%" align="center">
+**Say this:**
 
-**What you say**
-
-<img src="images/chat-prompt.png" alt="Chat prompt creating a Secure Score Assessment" width="100%">
-
-</td>
-<td width="50%" align="center">
-
-**What shows up in the portal**
+```
+Create a Secure Score Assessment for Contoso based on their Microsoft 365 tenant
+```
 
 <img src="images/portal-result.png" alt="Secure Score Assessment in CloudRadial portal" width="100%">
-
-</td>
-</tr>
-</table>
 
 ---
 
