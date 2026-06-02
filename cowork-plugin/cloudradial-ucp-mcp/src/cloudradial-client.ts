@@ -17,13 +17,14 @@ export interface ResourceConfig {
   odataPath: string;
   itemPath: string;
   idParam: string;
+    createPath?: string;
 }
 
 export const RESOURCE_MAP: Record<string, ResourceConfig> = {
   company:                  { odataPath: "company",                itemPath: "company",                idParam: "id" },
   user:                     { odataPath: "user",                   itemPath: "user",                   idParam: "id" },
   article:                  { odataPath: "article",                itemPath: "article",                idParam: "articleId" },
-  endpoint:                 { odataPath: "endpoint",               itemPath: "endpoint/id",            idParam: "endpointId" },
+    endpoint:                 { odataPath: "endpoint",               itemPath: "endpoint/id",            idParam: "endpointId",  createPath: "endpoint" },
   catalog:                  { odataPath: "catalog",                itemPath: "catalog",                idParam: "id" },
   catalog_question:         { odataPath: "catalogquestion",        itemPath: "catalogquestion",        idParam: "id" },
   assessment:               { odataPath: "assessment",             itemPath: "",                       idParam: "" },
