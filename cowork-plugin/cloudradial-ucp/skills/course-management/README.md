@@ -8,7 +8,7 @@
 Build a phishing-awareness training course for Contoso with 5 lessons and a final quiz
 ```
 
-<img src="images/portal-result.png" alt="Training course in CloudRadial portal" width="100%">
+<img src="images/skill-result.png" alt="Training course in CloudRadial portal" width="100%">
 
 ---
 
