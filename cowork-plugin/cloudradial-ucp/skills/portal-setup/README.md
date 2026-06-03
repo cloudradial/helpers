@@ -8,7 +8,7 @@
 What does Contoso need next in their CloudRadial implementation?
 ```
 
-<img src="images/portal-result.png" alt="Portal setup in CloudRadial" width="100%">
+<img src="images/skill-result.png" alt="Portal setup in CloudRadial" width="100%">
 
 ---
 
