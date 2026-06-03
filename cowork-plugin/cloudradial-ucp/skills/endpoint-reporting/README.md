@@ -8,7 +8,7 @@
 Which of Contoso's devices are out of warranty?
 ```
 
-<img src="images/portal-result.png" alt="Endpoint inventory in CloudRadial portal" width="100%">
+<img src="images/skill-result.png" alt="Endpoint inventory in CloudRadial portal" width="100%">
 
 ---
 
