@@ -8,7 +8,7 @@
 Setup the CloudRadial Plugin
 ```
 
-<img src="images/portal-result.png" alt="Setup confirmation" width="100%">
+<img src="images/skill-result.png" alt="Setup confirmation" width="100%">
 
 ---
 
