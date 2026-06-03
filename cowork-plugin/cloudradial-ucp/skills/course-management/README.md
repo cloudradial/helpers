@@ -1,31 +1,34 @@
-# Course Management — Partner Guide
+# Course Management
 
-> Create training courses, manage lessons, track enrollments and completions.
+> Build training courses from a topic, document, or YouTube link — all from a chat prompt.
 
-Use this skill any time you need **training content** in a client's portal — a security-awareness course, an onboarding curriculum, a software-specific module — or any time you need to **see who's done it**.
+**Say this:**
 
-## Try saying
+```
+Build a phishing-awareness training course for Contoso with 5 lessons and a final quiz
+```
 
-| What you want | Say this | What you'll get |
-|---|---|---|
-| Build a course from a topic | `Build a phishing-awareness training course for company 15` | Claude drafts course + lessons, asks to confirm, then creates them |
-| Build from a document | `Build a course for Contoso from this PDF / Word doc` *(attach it)* | Claude reads the doc, drafts a structured course, then creates it |
-| Build from a YouTube video | `Build a training course for Contoso from this YouTube link: <url>` | Claude summarizes the video into lessons, then creates the course |
-| See what exists | `Show all courses for Contoso` | List of courses with their IDs, names, and enrollment counts |
-| Add a lesson to an existing course | `Add a lesson called "Reporting Phishing" to course 372` | New `course_lesson` created with the right `courseId` |
-| Check completion | `Who's completed the security training at Acme Corp?` | List of completed enrollments with scores |
-| Mark someone complete | `Mark John Smith complete on course 372 with score 95` | Calls `courseenrollment_complete` |
-| Overdue learners | `Who at Contoso hasn't finished their required training?` | Filtered enrollment list |
+<img src="images/portal-result.png" alt="Training course in CloudRadial portal" width="100%">
 
-## Tips
+---
 
-- **Courses + lessons = two-step creation.** Course container first (`name`, `description`, `category`, `passScore`), then each lesson (`title`, `overview`, `text`, `order`). Claude handles the order for you.
-- **YouTube / docs / images** — Claude does the reading; the plugin just stores the resulting course. So results are as good as Claude's source comprehension.
-- **Final exam lessons are stubs.** Quiz mechanics live in the CloudRadial platform, not in lesson `text`.
-- **Course = `name`, not `title`.** Lesson = `title`. (Claude knows this; only matters if you use raw API calls.)
+## Try it
 
-## Related
+| Say this | What you get |
+|---|---|
+| `Build a phishing-awareness training course for Contoso` | Full course with lessons and a final quiz |
+| `Build a course from this YouTube link: <url>` | Claude summarizes the video into structured lessons |
+| `Who's completed the security training at Acme Corp?` | Enrollment status with completion dates |
+| `Show all courses for Contoso` | Course list with enrollment counts |
+| `Who at Contoso hasn't finished their required training?` | Users with incomplete enrollments |
 
-- [content-management](../content-management/README.md) — same write pattern for articles, catalogs, menus.
-- [user-management](../user-management/README.md) — for assigning courses to specific users or checking enrollments.
-- [portal-setup](../portal-setup/README.md) — Session 5 covers training assignment as part of handoff.
+## Good to know
+
+- **Course creation is two-step** — the course container is created first, then each lesson is added individually.
+- **YouTube/doc/image sources** — Claude reads and summarizes the content; the plugin stores the resulting course.
+- **Course uses `name`, lesson uses `title`** — different field names for the container vs. its children.
+
+## Related skills
+
+- [Content Management](../content-management) — for KB articles and service catalogs.
+- [User Management](../user-management) — to check who's enrolled and who's completed.
