@@ -1,30 +1,34 @@
-# Endpoint Reporting — Partner Guide
+# Endpoint Reporting
 
-> Inventory, warranty status, and software audit for a client's managed devices.
+> Warranty status, device inventory, and software audits — all from a chat prompt.
 
-Use this skill any time you need answers about **devices** — how many a client has, who's out of warranty, what software is installed, where the gaps are.
+**Say this:**
 
-## Try saying
+```
+Which of Contoso's devices are out of warranty?
+```
 
-| What you want | Say this | What you'll get |
-|---|---|---|
-| Device count | `How many endpoints does Acme Corp have?` | Just the number |
-| Full inventory | `List all of Contoso's endpoints with OS, manufacturer, and warranty` | Table of devices with the fields you asked for |
-| Warranty gaps | `Which of Contoso's devices are out of warranty?` | Filtered list, sorted by expiration date |
-| Refresh one device's warranty | `Refresh the warranty info for serial ABC12345` | Triggers `endpoint_update_warranty` (CloudRadial fetches it asynchronously) |
-| Refresh all of a company's | `Refresh warranty for all of Acme Corp's devices` | One refresh call per endpoint |
-| Software audit | `Show all software installed on endpoint 789` | List of `endpoint_application` records |
-| Custom properties | `Show me Contoso's endpoint custom properties` | Custom fields attached to devices |
-| QBR-ready report | `Build me a warranty expiration report for Acme Corp for the next 6 months` | Filtered list grouped/sorted for QBR slides |
+<img src="images/portal-result.png" alt="Endpoint inventory in CloudRadial portal" width="100%">
 
-## Tips
+---
 
-- **Warranty refresh is async.** `endpoint_update_warranty` triggers a background fetch — the new dates appear a few minutes later, not immediately. Re-list the device to confirm.
-- **Serial number is what the warranty tool needs**, not endpoint ID. If you only have the ID, Claude will look up the serial first.
-- **Filtering by OS** — say "Windows endpoints only" or "Macs only" and Claude filters via OData.
-- **`lastSeen` matters.** Devices that haven't checked in recently may not have current data — ask for it explicitly if you need it.
+## Try it
 
-## Related
+| Say this | What you get |
+|---|---|
+| `How many endpoints does Acme Corp have?` | Quick count of managed devices |
+| `Which of Contoso's devices are out of warranty?` | Filtered list with expiration dates |
+| `Refresh warranty for all of Acme Corp's devices` | Triggers async warranty lookup by serial number |
+| `Show all software installed on endpoint 789` | Application list for a specific device |
+| `Build a warranty expiration report for the next 6 months` | Sorted list of devices expiring soon |
 
-- [reporting-admin](../reporting-admin/README.md) — for archive reports that include endpoint stats.
-- [portal-setup](../portal-setup/README.md) — Session 4 (Reporting & QBR Prep) leans heavily on endpoint data.
+## Good to know
+
+- **Warranty refresh is async** — `endpoint_update_warranty` triggers a background fetch; new dates appear minutes later.
+- **The warranty tool needs the serial number**, not the endpoint ID. Claude looks up the serial first if needed.
+- **`lastSeen` matters** — devices that haven't checked in recently may have stale data.
+
+## Related skills
+
+- [Assessment & Compliance](../assessment-compliance) — combine with warranty data for GAP analysis.
+- [Reporting & Admin](../reporting-admin) — for archived endpoint audit reports.
