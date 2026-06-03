@@ -1,82 +1,94 @@
-CloudRadial Codex Plugin
-A Claude Code / Codex plugin that connects your AI assistant to the CloudRadial UCP
-Portal via a local MCP server. Query companies, users, endpoints, articles, feedback, and
-27 other resource types — including full read/write support — directly from your AI
-conversations.
-What’s here
-• cloudradial-codex/ — the plugin itself: 11 skills covering portal lookup, content
-management, endpoint reporting, course management, assessment compliance,
-feedback analysis, service management, reporting/admin, and an interactive setup
-wizard. The MCP server (@cloudradial/ucp-mcp) is bundled inside at cloudradialcodex/mcp-server/ so partners get a single drag-and-drop install — no Azure
-deployment, no Chrome extension, no separate server to host.
-Quick start
-For partners installing the plugin:
-1. Download the latest .plugin from GitHub Releases.
-2. Install using the normal plugin install flow (drag into Cowork, /plugin install in
-Claude Code, or install via gallery in Claude Desktop), then restart or reload the
-client so the MCP server is registered.
-3. In a new conversation, say “Set up CloudRadial.” The setup wizard collects your
-API keys, validates them with a live call, and stores them encrypted in your OS
-keychain.
-4. Start using it — “Look up Acme Corp”, “Give me an overview of company 42”,
-“Create a KB article about password resets”, etc.
-The first MCP tool call after install takes ~10 seconds while the bundled MCP server installs
-its production dependencies locally; subsequent calls are instant.
-For developers / contributors:
-git clone https://github.com/cloudradial/helpers.git
-cd helpers/codex-plugin/cloudradial-codex/mcp-server
-npm install
-npm run build
-Then point your MCP client at cloudradial-codex/mcp-server/launch.cjs (see
-DEPLOYMENT.md for client-specific config).
-Requirements
-• Node.js 18 or newer
-• CloudRadial API public and private keys
-• Network access to CloudRadial API V2
-Credential storage uses the local OS keychain (Windows Credential Manager, macOS
-Keychain, or libsecret / Secret Service on Linux). Linux systems need a running Secret
-Service provider such as gnome-keyring or kwallet.
-Architecture at a glance
+# CloudRadial Codex Plugin
+
+A Claude Code / Codex plugin that connects your AI assistant to the CloudRadial UCP Portal via a local MCP server. Query companies, users, endpoints, articles, feedback, and 27 other resource types — including full read/write support — directly from your AI conversations.
+
+## Install
+
+### Step 1 — Download the right file for your computer
+
+Go to the [**releases page**](https://github.com/cloudradial/helpers/releases) and download the **one** file that matches your computer:
+
+| Your computer | File to download |
+|---|---|
+| Mac — Apple Silicon (M1/M2/M3/M4) | `cloudradial-codex-macos-arm64.plugin` |
+| Mac — Intel (older) | `cloudradial-codex-macos-x64.plugin` |
+| Windows — most PCs | `cloudradial-codex-windows-x64.plugin` |
+| Windows on ARM (Surface Pro X, Copilot+ PC) | `cloudradial-codex-windows-arm64.plugin` |
+| Linux | `cloudradial-codex-linux-x64.plugin` (or `-linux-arm64`) |
+
+**Not sure which Mac you have?** Click the Apple menu → **About This Mac**. If the "Chip" line starts with "Apple," choose **arm64**. If it says "Intel," choose **x64**.
+
+### Step 2 — Install it
+
+- **Claude Code:** run `claude /plugin install <path-to-the-downloaded-file>`, then restart Claude Code.
+- **Claude Desktop:** drag the file into the app (or add it from the plugin gallery), then **quit and reopen** Claude Desktop.
+- **Cowork:** drag the downloaded file into the Cowork window, and approve it when asked.
+
+### Step 3 — Set it up
+
+Start a new conversation and type:
+
+> **Setup the CloudRadial Plugin**
+
+Claude will ask for your CloudRadial **public key** and **private key** (find them in your CloudRadial admin portal under **Settings → API**), check that they work, and store them securely in your computer's keychain.
+
+### Step 4 — Try something
+
+Pick anything from the skills below, or just ask Claude in your own words.
+
+## Skills (12)
+
+| Skill | What it does |
+|-------|--------------|
+| **[setup](cloudradial-codex/skills/setup/)** | First-run plugin setup + credential management |
+| **[portal-setup](cloudradial-codex/skills/portal-setup/)** | Walk a client through their 5-session CloudRadial implementation |
+| **[portal-lookup](cloudradial-codex/skills/portal-lookup/)** | Look up companies, check portal status, prepare for meetings |
+| **[content-management](cloudradial-codex/skills/content-management/)** | Create and manage KB articles, catalogs, menus |
+| **[user-management](cloudradial-codex/skills/user-management/)** | Look up users by email/name, list users by company |
+| **[endpoint-reporting](cloudradial-codex/skills/endpoint-reporting/)** | Device inventory, warranty reports, software audits |
+| **[course-management](cloudradial-codex/skills/course-management/)** | Create training courses from topics, docs, or YouTube links |
+| **[assessment-compliance](cloudradial-codex/skills/assessment-compliance/)** | Security assessments, compliance tracking |
+| **[feedback-analysis](cloudradial-codex/skills/feedback-analysis/)** | CSAT trends, satisfaction reporting |
+| **[service-management](cloudradial-codex/skills/service-management/)** | Services, domains, products |
+| **[reporting-admin](cloudradial-codex/skills/reporting-admin/)** | Archives, certificates, company groups, API tokens |
+| **[company-management](cloudradial-codex/skills/company-management/)** | Create, update, organize, and audit companies |
+
+## Architecture
+
+```
 You in Claude Code / Codex
- |
- | MCP tool calls (stdio JSON-RPC)
- v
-mcp-server/launch.cjs (auto-installs deps on first run)
- |
- | spawns
- v
-mcp-server/dist/index.js (the MCP server)
- |
- | HTTPS + HTTP Basic auth (keys from OS keychain)
- v
+     |
+     |  MCP tool calls (stdio JSON-RPC)
+     v
+mcp-server/launch.cjs  (auto-installs deps on first run)
+     |
+     |  spawns
+     v
+mcp-server/dist/index.js  (the MCP server)
+     |
+     |  HTTPS + HTTP Basic auth (keys from OS keychain)
+     v
 CloudRadial API V2
-Documentation
-• cloudradial-codex/README.md — plugin overview: skills, MCP tools, supported
-resources.
-• cloudradial-codex/DEPLOYMENT.md — install steps for Cowork, Claude Code, and
-Claude Desktop, plus troubleshooting.
-• cloudradial-codex/CAPABILITIES.md — tool reference with examples.
-• cloudradial-codex/mcp-server/README.md — MCP server details (for developers).
-• cloudradial-codex/references/api-reference.md — CloudRadial API V2 fieldlevel schema reference.
-Setup notes
-During setup, the plugin asks for your CloudRadial public key and private key. If your portal
-is not in the US region, you will also be asked for the region.
-Default API URL: https://api.us.cloudradial.com
-EU API URL: https://api.eu.cloudradial.com
-The setup wizard validates credentials with CloudRadial before storing them.
-Privacy note
-If you paste API keys into chat during setup, they may briefly appear in the conversation
-transcript. To avoid that, configure these environment variables in the MCP client instead:
-CLOUDRADIAL_PUBLIC_KEY
-CLOUDRADIAL_PRIVATE_KEY
-CLOUDRADIAL_BASE_URL
-Environment variables take precedence over keychain credentials.
-Troubleshooting
-• If Set up CloudRadial does not expose setup tools, restart or reload the MCP client.
-• If Node is missing, install the Node.js LTS release from https://nodejs.org.
-• If Linux keychain setup fails, install and start gnome-keyring or kwallet, or use
-environment variables.
-• If CloudRadial rejects credentials, re-check the public and private keys in the
-CloudRadial admin portal.
-License
+```
+
+## Credentials & security
+
+- **Stored in the OS keychain.** Never written to disk in plain text.
+- **Validated before storage.** The setup wizard makes a live API call before saving.
+- **Privacy note:** Keys pasted in chat appear briefly in the transcript. For more privacy, set `CLOUDRADIAL_PUBLIC_KEY` and `CLOUDRADIAL_PRIVATE_KEY` as environment variables instead.
+- **EU partners:** use `https://api.eu.cloudradial.com` during setup.
+
+## Requirements
+
+- Node.js 18 or newer
+- CloudRadial API public and private keys
+
+## Documentation
+
+- **[DEPLOYMENT.md](cloudradial-codex/DEPLOYMENT.md)** — Install steps and troubleshooting
+- **[CAPABILITIES.md](cloudradial-codex/CAPABILITIES.md)** — Tool reference with examples
+- **[references/api-reference.md](cloudradial-codex/references/api-reference.md)** — CloudRadial API V2 field-level schema
+
+## License
+
 MIT
