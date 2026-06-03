@@ -1,29 +1,32 @@
-# Feedback Analysis — Partner Guide
+# Feedback Analysis
 
-> Read and analyze user feedback, CSAT scores, and satisfaction trends.
+> CSAT scores, satisfaction trends, and feedback themes — all from a chat prompt.
 
-Use this skill any time you need to know **how a client's users feel** — CSAT after ticket resolution, portal feedback, satisfaction trends over time.
+**Say this:**
 
-## Try saying
+```
+What feedback has Contoso submitted lately?
+```
 
-| What you want | Say this | What you'll get |
-|---|---|---|
-| Recent feedback | `What feedback has Contoso submitted lately?` | The 10 newest feedback entries with ratings and comments |
-| CSAT score | `What's Contoso's CSAT average over the last 90 days?` | Rolled-up average across feedback in that window |
-| Negative feedback only | `Show me Contoso's bad reviews from the last month` | Filtered list (low ratings) so you can act on them |
-| Across all clients | `Which of my clients have the lowest CSAT this quarter?` | Cross-company comparison ranked by score |
-| Specific user's feedback | `What feedback has user 12345 submitted?` | Per-user feedback history |
-| Categorize | `What are the most common complaints from Contoso?` | Claude groups feedback by theme |
-| QBR-ready trend | `Build me a CSAT trend chart for Acme Corp` | Time-series summary suitable for QBR slides |
+<img src="images/skill-result.png" alt="Feedback data in CloudRadial portal" width="100%">
 
-## Tips
+---
 
-- **Sort by `dateCreated desc`** to get newest first — Claude does this automatically when you ask for "recent."
-- **Rating scale.** Different portals may use different scales (1–5, NPS). Claude works with whatever's in the data.
-- **Comment text matters.** Even with a high rating, the comment can reveal issues — ask Claude to "summarize themes in Contoso's recent feedback" rather than just averaging numbers.
-- **Pair with [user-management](../user-management/README.md)** to attach names to the user IDs in feedback rows.
+## Try it
 
-## Related
+| Say this                                                 | What you get                                |
+| -------------------------------------------------------- | ------------------------------------------- |
+| `What feedback has Contoso submitted lately?`            | Recent feedback entries sorted by date      |
+| `What's Contoso's CSAT average over the last 90 days?`   | Calculated average with trend direction     |
+| `Which of my clients have the lowest CSAT this quarter?` | Cross-company ranking by satisfaction score |
+| `Summarize themes in Contoso's recent feedback`          | Grouped analysis of comment topics          |
 
-- [portal-lookup](../portal-lookup/README.md) — overview includes the most recent feedback, useful for pre-meeting prep.
-- [portal-setup](../portal-setup/README.md) — Session 4 covers setting up feedback collection in the portal.
+## Good to know
+
+- **Comment text matters** — even high-rated feedback can reveal issues. Ask Claude to summarize themes, not just average numbers.
+- **Cross-company comparisons are built-in** — ask without naming a company to get a roll-up across all clients.
+
+## Related skills
+
+- [Portal Lookup](../portal-lookup) — includes recent feedback in the company overview.
+- [User Management](../user-management) — resolve user IDs to names in feedback entries.

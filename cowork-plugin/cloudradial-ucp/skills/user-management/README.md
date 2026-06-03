@@ -1,29 +1,34 @@
-# User Management — Partner Guide
+# User Management
 
-> Find, list, and analyze the people who use a client's CloudRadial portal.
+> Find, list, and analyze portal users — all from a chat prompt.
 
-Use this skill any time you need to **find a specific user**, **list everyone in a portal**, or **check adoption** (who's logging in, who's enrolled in courses).
+**Say this:**
 
-## Try saying
+```
+Who has access to Contoso's portal?
+```
 
-| What you want | Say this | What you'll get |
-|---|---|---|
-| Find someone by email | `Find user john@acme.com` | Matching user record(s) with name, role, and companyId |
-| Find by partial name | `List users named Smith` | All users with "Smith" in their first or last name |
-| Everyone at a company | `Who has access to Contoso's portal?` | Full user list for that company |
-| Quick count | `How many users does Acme Corp have?` | Just the number — fastest way to confirm a company is staffed |
-| Find by name + company | `Find Sarah at company 42` | Matches scoped to that company only |
-| Specific fields | `List Contoso's users with just name, email, and role` | Trimmed result so it's easy to scan |
+<img src="images/skill-result.png" alt="User list in CloudRadial portal" width="100%">
 
-## Tips
+---
 
-- **`user_lookup` is the fast path.** If you know the email, name, or company, Claude will use it instead of pulling the whole list.
-- **Adoption review** — pair this with [course-management](../course-management/README.md) ("which of Contoso's users haven't completed the security training?").
-- **One user, multiple companies?** Use `user_lookup` with the email — it returns the user record across companies they belong to.
-- **Pagination.** The CloudRadial API returns at most 200 results per page; for companies with thousands of users, Claude pages automatically.
+## Try it
 
-## Related
+| Say this | What you get |
+|---|---|
+| `Find user john@acme.com` | User record with company, role, and last login |
+| `Who has access to Contoso's portal?` | Full user list with names, emails, and roles |
+| `How many users does Acme Corp have?` | Quick count by company |
+| `List Contoso's users with just name, email, and role` | Filtered fields for a clean view |
+| `Which of Contoso's users haven't completed security training?` | Cross-referenced with course enrollments |
 
-- [portal-lookup](../portal-lookup/README.md) — for the company snapshot that includes user *count*.
-- [course-management](../course-management/README.md) — for enrollment and completion checks per user.
-- [feedback-analysis](../feedback-analysis/README.md) — to tie feedback back to specific users.
+## Good to know
+
+- **`user_lookup` is the fast path** when you know the email, name, or company.
+- **One user can appear in multiple companies** — lookup by email returns across all companies.
+- **Pagination is automatic** for companies with thousands of users (API max 200 per page).
+
+## Related skills
+
+- [Portal Lookup](../portal-lookup) — includes user counts in the company overview.
+- [Course Management](../course-management) — to check enrollment and completion per user.

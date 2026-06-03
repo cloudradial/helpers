@@ -1,29 +1,34 @@
-# Service Management — Partner Guide
+# Service Management
 
-> Review services, service installs, managed domains, and products across portals.
+> Services, installations, managed domains, and products — all from a chat prompt.
 
-Use this skill for anything **service-coverage-related**: what services a client has installed, what domains you're managing for them, which domains are about to expire, and what products are available.
+**Say this:**
 
-## Try saying
+```
+Which of my managed domains expire in the next 90 days?
+```
 
-| What you want | Say this | What you'll get |
-|---|---|---|
-| What's a client paying for | `What services are installed for Acme Corp?` | List of `service_install` records (links service IDs to companies) |
-| Catalog of services | `What services do we offer?` | All defined services with name, description, category |
-| Domains we manage | `List Contoso's managed domains` | Domain records with registrar, expiration |
-| Domain expiry sweep | `Which of my managed domains expire in the next 90 days?` | Filtered list across companies |
-| Add a service | `Install service 12 for Acme Corp` | Creates a `service_install` linking those two |
-| Remove a service | `Uninstall service 12 from Acme Corp` | Deletes the matching `service_install` |
-| Product catalog | `What products are listed in the portal?` | All `product` records |
-| Coverage summary | `Service coverage summary for Acme Corp` | Cross-references services and installs to show gaps |
+<img src="images/skill-result.png" alt="Service management in CloudRadial portal" width="100%">
 
-## Tips
+---
 
-- **`service_install` is a composite-key resource.** On create, Claude passes `endpoint_id` + `service_id`; on update/delete, `endpoint_id` + `id` (where `id` = the serviceId). Worth knowing if you use raw API calls.
-- **Domain expirations are partner-wide alerts.** Ask "any of my domains expiring soon" without naming a company to get a roll-up across every client.
-- **Products vs. services.** `product` = catalog item available for purchase. `service` = something offered/installed. Different resources; don't confuse them.
+## Try it
 
-## Related
+| Say this | What you get |
+|---|---|
+| `What services are installed for Acme Corp?` | Service installations with details |
+| `Which of my managed domains expire in the next 90 days?` | Cross-company domain expiration sweep |
+| `What services do we offer?` | Full service catalog |
+| `Service coverage summary for Acme Corp` | What's installed vs. what's available |
+| `List Contoso's managed domains` | Domain list with expiration dates |
 
-- [reporting-admin](../reporting-admin/README.md) — for archive-style cross-company reports including services.
-- [portal-setup](../portal-setup/README.md) — Session 2 covers initial service catalog configuration.
+## Good to know
+
+- **`service_install` uses a composite key** — on create: `endpoint_id` + `service_id`. On update/delete: `endpoint_id` + `id`.
+- **Domain expirations are partner-wide** — ask without naming a company for a roll-up across all clients.
+- **Products vs. services** — `product` = catalog item for purchase; `service` = something offered/installed.
+
+## Related skills
+
+- [Reporting & Admin](../reporting-admin) — for service-related archive reports.
+- [Portal Setup](../portal-setup) — Session 2 focuses on ticketing and service desk setup.

@@ -8,7 +8,7 @@
 Create a Secure Score Assessment for Contoso based on their Microsoft 365 tenant
 ```
 
-<img src="images/portal-result.png" alt="Secure Score Assessment in CloudRadial portal" width="100%">
+<img src="images/skill-result.png" alt="Secure Score Assessment in CloudRadial portal" width="100%">
 
 ---
 
