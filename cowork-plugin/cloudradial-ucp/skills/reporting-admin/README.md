@@ -8,7 +8,7 @@
 Show me Acme Corp's archived reports
 ```
 
-<img src="images/portal-result.png" alt="Archive reports in CloudRadial portal" width="100%">
+<img src="images/skill-result.png" alt="Archive reports in CloudRadial portal" width="100%">
 
 ---
 
