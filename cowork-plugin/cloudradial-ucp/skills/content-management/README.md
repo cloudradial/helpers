@@ -8,7 +8,7 @@
 Seed Contoso's portal with 10 starter KB articles covering password reset, VPN, MFA, and M365 basics
 ```
 
-<img src="images/portal-result.png" alt="Knowledge Base articles in CloudRadial portal" width="100%">
+<img src="images/skill-result.png" alt="Knowledge Base articles in CloudRadial portal" width="100%">
 
 ---
 
