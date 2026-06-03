@@ -8,7 +8,7 @@
 Who has access to Contoso's portal?
 ```
 
-<img src="images/portal-result.png" alt="User list in CloudRadial portal" width="100%">
+<img src="images/skill-result.png" alt="User list in CloudRadial portal" width="100%">
 
 ---
 
