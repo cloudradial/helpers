@@ -8,7 +8,7 @@
 Which of my managed domains expire in the next 90 days?
 ```
 
-<img src="images/portal-result.png" alt="Service management in CloudRadial portal" width="100%">
+<img src="images/skill-result.png" alt="Service management in CloudRadial portal" width="100%">
 
 ---
 
