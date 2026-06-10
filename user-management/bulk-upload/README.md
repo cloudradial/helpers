@@ -61,21 +61,9 @@ Optional columns (include them only if needed):
 - **city** — City
 - **state** — State/province
 - **postalCode** — Postal code
-- **isShowInDirectory** — true/false (show in company directory)
-- **isPartnerAdminUser** — true/false (partner admin privileges)
-- **is365Active** — true/false (Microsoft 365 integration active)
-- **isCompliance** — true/false (compliance user)
-- **isDigestOptIn** — true/false (receive digest emails)
-- **isDirectOptIn** — true/false (receive direct notifications)
-- **isOfficeStrongAuthentication** — true/false (Office strong auth enabled)
-- **isLoginDisabled** — true/false (disable login)
 - **psaKey** — ConnectWise PSA user ID (integer)
 - **psaSiteKey** — ConnectWise PSA site ID (integer)
 - **psaChildAccountKey** — ConnectWise PSA child account ID (integer)
-- **priorityStatus** — Priority level (integer)
-- **source** — Source code (integer)
-- **ticketBoardOverride** — Ticket board override value
-- **ticketStatusOverride** — Ticket status override value
 
 Use the provided **users-template.csv** as a starting point. Export your user list from Active Directory, a spreadsheet, or another source and map it to these columns.
 
