@@ -272,7 +272,7 @@ function Invoke-ListAction {
 
         # Filter to templates (catalogUsage = 'Template' or catalogType = 99)
         $templates = $allItems | Where-Object {
-            $_.catalogUsage -eq 'Template' -or $_.catalogType -eq 99
+            $_.catalogUsage -eq 'Template'
         }
 
         if ($templates.Count -eq 0) {
@@ -373,7 +373,6 @@ function Invoke-ExportAction {
                 subject                    = $template.subject
                 category                   = $template.category
                 catalogUsage               = $template.catalogUsage
-                catalogType                = $template.catalogType
                 isAllowedCompanyChanges    = $template.isAllowedCompanyChanges
                 psaBoard                   = $template.psaBoard
                 psaStatus                  = $template.psaStatus
@@ -471,7 +470,6 @@ function Invoke-ImportAction {
             subject                    = $newTemplateName
             category                   = $template.category
             catalogUsage               = 'Template'
-            catalogType                = 99
             isAllowedCompanyChanges    = $template.isAllowedCompanyChanges
             psaBoard                   = $template.psaBoard
             psaStatus                  = $template.psaStatus
