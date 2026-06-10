@@ -144,7 +144,7 @@ If you import a template, modify it in CloudRadial, and want to back up the revi
 The script encountered API throttling or temporary server issues. Wait a moment and try again.
 
 **"No templates found":**
-The script is looking for items with `catalogUsage = 'Template'` or `catalogType = 99`. If custom templates don't appear, verify they're marked as templates in CloudRadial.
+The script is looking for items with `catalogUsage = 'Template'`. If custom templates don't appear, verify they're marked as templates in CloudRadial.
 
 **Conditional logic not working after import:**
 The script remaps childQuestionIds automatically. If show/hide rules still don't work, check that parent and child questions exist in the destination and that the JSON was not manually edited incorrectly.
