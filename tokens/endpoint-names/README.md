@@ -1,21 +1,21 @@
-# Create Device Name Tokens — Dynamic Endpoint and Server Lists for Portal Forms
+# Create Device Name Tokens â Dynamic Endpoint and Server Lists for Portal Forms
 
 ## Why This Matters
 
-CloudRadial tracks endpoints and servers in the portal through the Data Agent and the Datto RMM integration. That device data is there — but it isn't available as a dropdown or multi-select list in ticket and service request forms. So when an end user needs to submit a request like "I'd like software installed on this machine" or "I'd like to order a license for this device," there's no way for them to pick from their actual devices. They're left typing free-text — misspelled hostnames, vague descriptions like "my laptop," or just leaving it blank.
+CloudRadial tracks endpoints and servers in the portal through the Data Agent and the Datto RMM integration. That device data is there â but it isn't available as a dropdown or multi-select list in ticket and service request forms. So when an end user needs to submit a request like "I'd like software installed on this machine" or "I'd like to order a license for this device," there's no way for them to pick from their actual devices. They're left typing free-text â misspelled hostnames, vague descriptions like "my laptop," or just leaving it blank.
 
-This script bridges that gap. It pulls a company's active device names — either endpoints or servers, controlled by the `-DeviceType` flag — and stores them as a comma-separated value in a company-level token. CloudRadial forms treat comma-separated token values as individual answer options, so once the token exists, any multi-select or multi-choice question in any form — whether it's part of a Question Template or a standalone ticket form — can use it as an answer source. End users see a clean list of their own devices and pick from it.
+This script bridges that gap. It pulls a company's active device names â either endpoints or servers, controlled by the `-DeviceType` flag â and stores them as a comma-separated value in a company-level token. CloudRadial forms treat comma-separated token values as individual answer options, so once the token exists, any multi-select or multi-choice question in any form â whether it's part of a Question Template or a standalone ticket form â can use it as an answer source. End users see a clean list of their own devices and pick from it.
 
-The script creates @EndpointNames when run for endpoints (the default) and @ServerNames when run for servers. Run both to give your forms access to the full device inventory. Because tokens are company-level, each company's forms automatically show only their own devices. Run the script on a schedule and the lists stay current — new machines appear, decommissioned ones disappear, no manual maintenance required.
+The script creates @EndpointNames when run for endpoints (the default) and @ServerNames when run for servers. Run both to give your forms access to the full device inventory. Because tokens are company-level, each company's forms automatically show only their own devices. Run the script on a schedule and the lists stay current â new machines appear, decommissioned ones disappear, no manual maintenance required.
 
 > **Coming soon:** A separate script for Flexible Asset tokens is planned as a future addition to this folder.
 
 ## Who This Is For
 
-- **Partners building ticket and request forms** — "Which device is this about?" becomes a real dropdown instead of a free-text field. Works in any form type: tickets, service requests, change requests, onboarding forms.
-- **Partners who already have device data flowing into CloudRadial** — Whether it comes from the Data Agent or the Datto RMM integration, this script takes data you already have and makes it usable in forms.
-- **Partners managing multiple clients** — Run it with `-AllCompanies` and every client company gets updated device lists in one pass. No per-company maintenance.
-- **Partners reducing ticket triage time** — When the exact device name is captured at submission, dispatch and triage workflows get structured data instead of guesswork.
+- **Partners building ticket and request forms** â "Which device is this about?" becomes a real dropdown instead of a free-text field. Works in any form type: tickets, service requests, change requests, onboarding forms.
+- **Partners who already have device data flowing into CloudRadial** â Whether it comes from the Data Agent or the Datto RMM integration, this script takes data you already have and makes it usable in forms.
+- **Partners managing multiple clients** â Run it with `-AllCompanies` and every client company gets updated device lists in one pass. No per-company maintenance.
+- **Partners reducing ticket triage time** â When the exact device name is captured at submission, dispatch and triage workflows get structured data instead of guesswork.
 
 ## What You'll Need
 
@@ -29,12 +29,12 @@ Tokens are dynamic @name placeholders that resolve to specific values per compan
 
 This script:
 
-1. Queries a company's active device inventory from CloudRadial (endpoints or servers, based on `-DeviceType`)
+1. Queries a company's active device inventory from CloudRadial's endpoint entity (both workstations and servers live here â the `-DeviceType` flag filters by the `isServer` property)
 2. Extracts the device names (preferring machineName, falling back to name) from each device
 3. Deduplicates and sorts the names, then stores them as a single comma-separated value in a company-level token
 4. Any form question that references the token (e.g., @EndpointNames or @ServerNames) now shows those devices as selectable options
 
-Because the token is set at the company level, each company's forms display only their own devices. Run the script again any time — it overwrites the token with the current device list, so the form options stay in sync with the actual inventory.
+Because the token is set at the company level, each company's forms display only their own devices. Run the script again any time â it overwrites the token with the current device list, so the form options stay in sync with the actual inventory.
 
 ## Step 1: Set Your Credentials
 
@@ -113,14 +113,14 @@ After running the script, verify that the tokens were created:
 
 ## Using the Token in Forms
 
-Once a token exists for a company, any multi-select or multi-choice question can use it as its answer source. This works in Question Templates, standalone ticket forms, and service request forms — the token doesn't need to be tied to a Question Template to work.
+Once a token exists for a company, any multi-select or multi-choice question can use it as its answer source. This works in Question Templates, standalone ticket forms, and service request forms â the token doesn't need to be tied to a Question Template to work.
 
 **Common form scenarios:**
 
-- "Which computer needs attention?" — Add a multi-choice question with @EndpointNames as the answer source. The end user picks their workstation from the list.
-- "Select the machines for software deployment" — Use a multi-select question so the user can choose multiple endpoints in one request.
-- "Which server should receive the update?" — Use @ServerNames as the answer source for server-specific requests.
-- "Which device should receive the new license?" — Use @EndpointNames or @ServerNames depending on whether the license applies to workstations or servers.
+- "Which computer needs attention?" â Add a multi-choice question with @EndpointNames as the answer source. The end user picks their workstation from the list.
+- "Select the machines for software deployment" â Use a multi-select question so the user can choose multiple endpoints in one request.
+- "Which server should receive the update?" â Use @ServerNames as the answer source for server-specific requests.
+- "Which device should receive the new license?" â Use @EndpointNames or @ServerNames depending on whether the license applies to workstations or servers.
 
 You can also reference these tokens in portal content (knowledge base articles, dashboards) to display a company's device lists outside of forms.
 
@@ -152,7 +152,7 @@ If you want to use a different token name (e.g., @Computers or @MyEndpoints), pa
 ```
 
 ### Filter Devices Differently
-The script includes all active devices by default (isBlocked eq false). If you need different filtering logic — for example, excluding certain device types, filtering by location, or applying custom business rules — edit the `Get-ActiveDevices` function to adjust the OData filter.
+The script includes all active devices by default (isBlocked eq false). If you need different filtering logic â for example, excluding certain device types, filtering by location, or applying custom business rules â edit the `Get-ActiveDevices` function to adjust the OData filter.
 
 ### Adapt with AI
 Use tools like GitHub Copilot or ChatGPT to help customize the script for your specific workflow, such as:
