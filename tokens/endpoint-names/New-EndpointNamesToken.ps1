@@ -213,13 +213,14 @@ function Get-ActiveDevices {
 
     $devices = @()
 
-    # Build the OData URI based on device type
-    $entity = switch ($DeviceType) {
-        "Endpoint" { "endpoint" }
-        "Server"   { "server" }
+    # Both endpoints and servers live on the /v2/odata/endpoint entity.
+    # Servers are endpoints where isServer eq true.
+    $serverFilter = switch ($DeviceType) {
+        "Endpoint" { "(isServer eq false)" }
+        "Server"   { "(isServer eq true)" }
     }
 
-    $nextLink = "$BaseUri/v2/odata/$entity`?\$filter=(companyId eq $CompanyId) and (isBlocked eq false)&\$select=companyId,machineName,name,isBlocked&\$orderby=companyId&\$top=200"
+    $nextLink = "$BaseUri/v2/odata/endpoint?`$filter=(companyId eq $CompanyId) and (isBlocked eq false) and $serverFilter&`$select=companyEndpointId,companyId,machineName,name,isServer,isBlocked&`$orderby=machineName&`$top=200"
 
     while ($nextLink) {
         $response = Invoke-CloudRadialApi -Method Get -Uri $nextLink -AuthHeader $AuthHeader -MaxRetries $MaxRetries
