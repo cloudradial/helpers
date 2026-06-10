@@ -14,10 +14,8 @@
 .PARAMETER CsvPath
     Mandatory. Path to the CSV file containing user data. Required columns: email,
     firstName, lastName, userName. Optional columns: department, title, phoneNumber,
-    mobilePhone, country, streetAddress, city, state, postalCode, isShowInDirectory,
-    isPartnerAdminUser, is365Active, isCompliance, isDigestOptIn, isDirectOptIn,
-    isOfficeStrongAuthentication, psaKey, psaSiteKey, psaChildAccountKey,
-    isLoginDisabled, priorityStatus, source, ticketBoardOverride, ticketStatusOverride.
+    mobilePhone, country, streetAddress, city, state, postalCode, psaKey,
+    psaSiteKey, psaChildAccountKey.
 
 .PARAMETER CompanyId
     Mandatory. The numeric ID of the CloudRadial company to import users into.
@@ -359,28 +357,14 @@ function Import-User {
         "streetAddress",
         "city",
         "state",
-        "postalCode",
-        "ticketBoardOverride",
-        "ticketStatusOverride"
+        "postalCode"
     )
 
-    $boolFields = @(
-        "isShowInDirectory",
-        "isPartnerAdminUser",
-        "is365Active",
-        "isCompliance",
-        "isDigestOptIn",
-        "isDirectOptIn",
-        "isOfficeStrongAuthentication",
-        "isLoginDisabled"
-    )
 
     $intFields = @(
         "psaKey",
         "psaSiteKey",
-        "psaChildAccountKey",
-        "priorityStatus",
-        "source"
+        "psaChildAccountKey"
     )
 
     foreach ($field in $optionalFields) {
@@ -389,11 +373,6 @@ function Import-User {
         }
     }
 
-    foreach ($field in $boolFields) {
-        if ($UserData.PSObject.Properties.Name -contains $field -and $UserData.$field) {
-            $userObject[$field] = [bool]::Parse($UserData.$field)
-        }
-    }
 
     foreach ($field in $intFields) {
         if ($UserData.PSObject.Properties.Name -contains $field -and $UserData.$field) {
