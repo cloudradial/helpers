@@ -31,6 +31,14 @@ how to write its asset/EOL data back onto the real endpoints — follow
 `${CLAUDE_PLUGIN_ROOT}/skills/client-deliverable/references/scalepad-lifecycle-mapping.md`
 alongside the sequence below.
 
+**Automated alternative.** The same ScalePad → CloudRadial mapping also ships as an
+AutomationAI workflow, **ScalePad → CloudRadial Lifecycle Sync**, in the AutomationAI
+Workflows marketplace. It reads the ScalePad Lifecycle Manager *API* and writes straight
+into CloudRadial (endpoints enriched by serial; initiatives and contracts as Planner
+items) — no PDF, on a schedule, with a `plan`/`apply` safety gate. Use **this skill** for a
+guided, human-in-the-loop one-off build; use **that workflow** for recurring, unattended
+sync across a portfolio.
+
 ## Before any tool call
 
 Call `setup_status`. If it returns `configured: false`, defer to the `setup` skill.

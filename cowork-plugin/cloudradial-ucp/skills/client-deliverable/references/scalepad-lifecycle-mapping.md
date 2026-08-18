@@ -140,6 +140,17 @@ Sync endpoints **before** building the roadmap `body` tables. Once the endpoints
 ("Warranty/EOL 02 Mar 2024") and the numbers in the report match what the portal will
 show going forward.
 
+## Automating this
+
+This reference is for a guided, human-in-the-loop build from a PDF. To run the same
+mapping unattended, use the **ScalePad → CloudRadial Lifecycle Sync** AutomationAI
+workflow (AutomationAI Workflows marketplace). It skips the PDF entirely — reading the
+ScalePad Lifecycle Manager *API* (`hardware-lifecycles`, `initiatives`, `contracts`) and
+writing into CloudRadial via the `cloudradial-v2-endpoints` / `-services` extensions, with
+a `plan`/`apply` safety gate and platform approval on every write. Same field map as here;
+different trigger. Reach for the workflow when a partner wants recurring, portfolio-wide
+sync rather than a one-off deliverable.
+
 ## Report honestly
 
 Close with counts, not adjectives: how many assets had serials, how many endpoints were
