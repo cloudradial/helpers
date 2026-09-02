@@ -95,3 +95,72 @@ export function clearKeychain(): void {
     try { entry(k).deletePassword(); } catch { /* missing entry is fine */ }
   }
 }
+
+// ---------------------------------------------------------------------------
+// ScalePad Lifecycle Manager credentials (optional; used by the ScalePad sync
+// tools). Stored under the same keychain service, separate accounts. Auth to
+// ScalePad is an `x-api-key` header (not Basic), so only a key + base URL.
+// ---------------------------------------------------------------------------
+const KEY_SP_API_KEY = "scalepad_api_key";
+const KEY_SP_BASE_URL = "scalepad_base_url";
+
+export interface ScalePadCredentials {
+  apiKey: string;
+  baseUrl: string;
+}
+
+export interface ScalePadStatus {
+  configured: boolean;
+  source: CredentialSource;
+  baseUrl: string | null;
+  /** Last 4 chars of the API key for confirmation — never the full key. */
+  apiKeyHint: string | null;
+}
+
+function readScalePadKeychain(): ScalePadCredentials | null {
+  try {
+    const apiKey = entry(KEY_SP_API_KEY).getPassword();
+    const baseUrl = entry(KEY_SP_BASE_URL).getPassword();
+    if (!apiKey || !baseUrl) return null;
+    return { apiKey, baseUrl };
+  } catch {
+    return null;
+  }
+}
+
+function readScalePadEnv(): ScalePadCredentials | null {
+  const apiKey = process.env.SCALEPAD_API_KEY;
+  const baseUrl = process.env.SCALEPAD_API_URL || process.env.SCALEPAD_BASE_URL;
+  if (!apiKey || !baseUrl) return null;
+  return { apiKey, baseUrl };
+}
+
+export function loadScalePadCredentials(): { creds: ScalePadCredentials; source: CredentialSource } | null {
+  const env = readScalePadEnv();
+  if (env) return { creds: env, source: "env" };
+  const kc = readScalePadKeychain();
+  if (kc) return { creds: kc, source: "keychain" };
+  return null;
+}
+
+export function getScalePadStatus(): ScalePadStatus {
+  const loaded = loadScalePadCredentials();
+  if (!loaded) return { configured: false, source: null, baseUrl: null, apiKeyHint: null };
+  return {
+    configured: true,
+    source: loaded.source,
+    baseUrl: loaded.creds.baseUrl,
+    apiKeyHint: loaded.creds.apiKey.slice(-4),
+  };
+}
+
+export function saveScalePadToKeychain(creds: ScalePadCredentials): void {
+  entry(KEY_SP_API_KEY).setPassword(creds.apiKey);
+  entry(KEY_SP_BASE_URL).setPassword(creds.baseUrl);
+}
+
+export function clearScalePadKeychain(): void {
+  for (const k of [KEY_SP_API_KEY, KEY_SP_BASE_URL]) {
+    try { entry(k).deletePassword(); } catch { /* missing entry is fine */ }
+  }
+}

@@ -3,7 +3,16 @@ import {
   clearKeychain,
   getStatus,
   saveToKeychain,
+  clearScalePadKeychain,
+  getScalePadStatus,
+  saveScalePadToKeychain,
 } from "./credentials.js";
+import {
+  callScalePad,
+  scalePadListAll,
+  normalizeScalePadAsset,
+  normalizeDate,
+} from "./scalepad-client.js";
 
 const RESOURCE_TYPES = Object.keys(RESOURCE_MAP);
 
@@ -42,6 +51,37 @@ function requireResource(args: Record<string, unknown>) {
   return { resourceType, config };
 }
 
+/** Resolve a ScalePad client id from scalepad_client_id, else by client_name. */
+async function resolveScalePadClientId(args: Record<string, unknown>): Promise<string> {
+  const id = str(args, "scalepad_client_id");
+  if (id) return id;
+  const name = str(args, "client_name");
+  if (!name) throw new Error("Provide scalepad_client_id or client_name.");
+  const res = await callScalePad("GET", "/core/v1/clients", {
+    "filter[name]": `cont:${name}`,
+    page_size: "10",
+  });
+  if (res.status < 200 || res.status >= 300) {
+    throw new Error(`ScalePad client lookup failed (HTTP ${res.status}).`);
+  }
+  const d = res.data as { data?: unknown; value?: unknown } | unknown[] | null;
+  const rows: Record<string, unknown>[] = Array.isArray(d)
+    ? (d as Record<string, unknown>[])
+    : (((d as { data?: unknown })?.data as Record<string, unknown>[]) ??
+       ((d as { value?: unknown })?.value as Record<string, unknown>[]) ??
+       []);
+  if (rows.length === 0) throw new Error(`No ScalePad client matched '${name}'.`);
+  const lc = name.trim().toLowerCase();
+  const exact = rows.filter((r) => String(r.name ?? "").trim().toLowerCase() === lc);
+  const pick = exact.length ? exact[0] : rows[0];
+  const cid = String(pick.id ?? "");
+  if (!cid) throw new Error("Could not resolve a ScalePad client id.");
+  if (rows.length > 1 && exact.length !== 1) {
+    // Ambiguous; caller can pass scalepad_client_id to disambiguate.
+  }
+  return cid;
+}
+
 export const tools: ToolDefinition[] = [
   // -------------------------------------------------------------------------
   // Setup / credential management tools — call these first
@@ -49,12 +89,12 @@ export const tools: ToolDefinition[] = [
   {
     name: "setup_status",
     description:
-      "Check whether CloudRadial credentials are configured. Returns {configured, source ('env'|'keychain'), baseUrl, publicKeyHint (last 4 chars of public key)}. Never returns the full keys. Call this BEFORE any other CloudRadial tool — if configured is false, run the setup wizard before doing CloudRadial work.",
+      "Check whether CloudRadial credentials are configured. Returns {configured, source ('env'|'keychain'), baseUrl, publicKeyHint (last 4 chars of public key)}, plus a `scalepad` sub-object with the same shape for the optional ScalePad integration. Never returns the full keys. Call this BEFORE any other CloudRadial tool — if configured is false, run the setup wizard before doing CloudRadial work.",
     inputSchema: {
       type: "object",
       properties: {},
     },
-    handler: async () => getStatus(),
+    handler: async () => ({ ...getStatus(), scalepad: getScalePadStatus() }),
   },
 
   {
@@ -610,6 +650,253 @@ export const tools: ToolDefinition[] = [
       const userId = requireStr(args, "user_id");
       const result = await callApi("GET", `/v2/courseenrollment/course/${courseId}/user/${encodeURIComponent(userId)}`);
       return result.data;
+    },
+  },
+
+  // -------------------------------------------------------------------------
+  // ScalePad Lifecycle Manager → CloudRadial endpoint sync
+  // -------------------------------------------------------------------------
+  {
+    name: "configure_scalepad_credentials",
+    description:
+      "Store ScalePad Lifecycle Manager API credentials (api_key + base_url) in the OS keychain, separate from the CloudRadial keys. Validates with a live `/core/v1/clients` call before saving. Needed only for the ScalePad sync tools; CloudRadial tools do not use it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        api_key:  { type: "string", description: "ScalePad API key (sent as the `x-api-key` header)" },
+        base_url: { type: "string", description: "ScalePad API base URL (the value your AutomationAI ScalePad-ApiUrl secret uses)" },
+      },
+      required: ["api_key", "base_url"],
+    },
+    handler: async (args) => {
+      const apiKey = requireStr(args, "api_key");
+      const baseUrl = requireStr(args, "base_url").replace(/\/+$/, "");
+      let resp: Response;
+      try {
+        resp = await fetch(`${baseUrl}/core/v1/clients?page_size=1`, {
+          headers: { "x-api-key": apiKey, Accept: "application/json" },
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`Network error reaching ${baseUrl}: ${msg}`);
+      }
+      if (resp.status === 401 || resp.status === 403) {
+        throw new Error(`ScalePad rejected that API key (HTTP ${resp.status}). Double-check the key and that it has API access.`);
+      }
+      if (!resp.ok) {
+        const body = await resp.text();
+        throw new Error(`ScalePad validation call failed (HTTP ${resp.status}) — check the base URL. ${body.slice(0, 150)}`);
+      }
+      saveScalePadToKeychain({ apiKey, baseUrl });
+      return { success: true, message: "ScalePad credentials validated and stored.", ...getScalePadStatus() };
+    },
+  },
+
+  {
+    name: "clear_scalepad_credentials",
+    description: "Delete the stored ScalePad credentials from the OS keychain. Does not affect env vars or CloudRadial credentials.",
+    inputSchema: { type: "object", properties: {} },
+    handler: async () => {
+      clearScalePadKeychain();
+      return { success: true, scalepad: getScalePadStatus() };
+    },
+  },
+
+  {
+    name: "scalepad_list_hardware",
+    description:
+      "List a ScalePad client's hardware lifecycle records (serial, manufacturer, model, warranty/EOL date, purchase date, OS). Resolve the client by scalepad_client_id, or pass client_name to look it up. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        scalepad_client_id: { type: "string", description: "ScalePad client id (skips name lookup)" },
+        client_name:        { type: "string", description: "ScalePad client name fragment (used if no id given)" },
+        limit:              { type: "string", description: "Max records to return (default 500)" },
+      },
+    },
+    handler: async (args) => {
+      const clientId = await resolveScalePadClientId(args);
+      const rows = await scalePadListAll(
+        "/lifecycle-manager/v1/assets/hardware/lifecycles",
+        { "filter[client_id]": `eq:${clientId}` }
+      );
+      const assets = rows.map(normalizeScalePadAsset);
+      const limit = Number(str(args, "limit") || "500");
+      const withSerial = assets.filter((a) => a.serialNumber).length;
+      return {
+        scalePadClientId: clientId,
+        total: assets.length,
+        withSerial,
+        assets: assets.slice(0, isNaN(limit) ? 500 : limit),
+      };
+    },
+  },
+
+  {
+    name: "sync_scalepad_endpoints",
+    description:
+      "Sync a ScalePad client's per-device lifecycle data onto the matching CloudRadial endpoints, matched by serial number. Writes only the fields the endpoint is missing (never clobbers RMM data): expirationDate (warranty/EOL), manufacturedDate (purchase), manufacturer, model, os, osVersion. Defaults to a no-write PLAN that returns the diff; pass apply=true to perform the writes. Optionally creates tagged placeholder endpoints for assets not in the portal.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        company_id:          { type: "string", description: "CloudRadial companyId to sync into" },
+        scalepad_client_id:  { type: "string", description: "ScalePad client id" },
+        client_name:         { type: "string", description: "ScalePad client name fragment (used if no scalepad_client_id)" },
+        apply:               { type: "boolean", description: "false (default) = plan only, write nothing. true = perform the writes." },
+        include_specs:       { type: "boolean", description: "Also gap-fill memory / antiVirus when ScalePad has them (default false)." },
+        create_missing:      { type: "boolean", description: "Create a tagged placeholder endpoint for assets with a serial but no matching endpoint (default false)." },
+        new_endpoint_defaults: {
+          type: "object",
+          description: "Required integer enum codes for create_missing: { platformType, enclosure }. See the Enumerations section of the API reference; confirm against a real endpoint.",
+          properties: {
+            platformType: { type: "integer" },
+            enclosure:    { type: "integer" },
+          },
+        },
+      },
+      required: ["company_id"],
+    },
+    handler: async (args) => {
+      const companyId = requireStr(args, "company_id");
+      const apply = args.apply === true;
+      const includeSpecs = args.include_specs === true;
+      const createMissing = args.create_missing === true;
+      const defaults = (args.new_endpoint_defaults as Record<string, unknown>) || {};
+
+      const clientId = await resolveScalePadClientId(args);
+
+      // 1) ScalePad assets.
+      const spRows = await scalePadListAll(
+        "/lifecycle-manager/v1/assets/hardware/lifecycles",
+        { "filter[client_id]": `eq:${clientId}` }
+      );
+      const assets = spRows.map(normalizeScalePadAsset);
+
+      // 2) CloudRadial endpoints for this company → serial map.
+      const select = "companyEndpointId,name,serialNumber,expirationDate,manufacturedDate,manufacturer,model,os,osVersion,memory,antiVirus";
+      const bySerial = new Map<string, Record<string, unknown>>();
+      let epCount = 0;
+      for (let skip = 0; ; skip += 100) {
+        const res = await callApi("GET", "/v2/odata/endpoint", {
+          $filter: `companyId eq ${companyId}`,
+          $select: select,
+          $top: "100",
+          $skip: String(skip),
+        });
+        const page = ((res.data as { value?: unknown })?.value as Record<string, unknown>[]) || [];
+        for (const e of page) {
+          const s = e.serialNumber as string | undefined;
+          if (s) bySerial.set(s.trim().toUpperCase(), e);
+          epCount++;
+        }
+        if (page.length < 100 || skip > 20000) break;
+      }
+
+      const isEmpty = (v: unknown) => v === null || v === undefined || v === "";
+      const planUpdate: Array<{ serial: string; companyEndpointId: string; fields: string[] }> = [];
+      const planCreate: Array<{ serial: string; name: string }> = [];
+      const warnings: string[] = [];
+      let updated = 0, created = 0, skippedNoSerial = 0, skippedNoChange = 0, skippedNoMatch = 0, errors = 0;
+
+      for (const a of assets) {
+        if (!a.serialNumber) { skippedNoSerial++; continue; }
+        const key = a.serialNumber.toUpperCase();
+        const ep = bySerial.get(key);
+
+        if (ep) {
+          // Gap-fill only.
+          const ops: Array<{ op: string; path: string; value: unknown }> = [];
+          const setIfEmpty = (field: string, value: unknown) => {
+            if (value === null || value === undefined || value === "") return;
+            if (!isEmpty(ep[field])) return;
+            ops.push({ op: "replace", path: `/${field}`, value });
+          };
+          setIfEmpty("expirationDate", normalizeDate(a.warrantyExpiry));
+          setIfEmpty("manufacturedDate", normalizeDate(a.purchaseDate));
+          setIfEmpty("manufacturer", a.manufacturer);
+          setIfEmpty("model", a.model);
+          setIfEmpty("os", a.os);
+          setIfEmpty("osVersion", a.osVersion);
+          if (includeSpecs) {
+            const memEmpty = isEmpty(ep.memory) || String(ep.memory) === "0";
+            if (memEmpty && a.memoryBytes) ops.push({ op: "replace", path: "/memory", value: String(a.memoryBytes) });
+            setIfEmpty("antiVirus", a.antiVirus);
+          }
+          if (ops.length === 0) { skippedNoChange++; continue; }
+          const epId = String(ep.companyEndpointId);
+          planUpdate.push({ serial: a.serialNumber, companyEndpointId: epId, fields: ops.map((o) => o.path.slice(1)) });
+          if (apply) {
+            try {
+              await callApi("PATCH", `/v2/endpoint/id/${epId}`, undefined, ops);
+              updated++;
+            } catch (err) {
+              errors++;
+              warnings.push(`PATCH ${a.serialNumber}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+          }
+        } else {
+          if (!createMissing) { skippedNoMatch++; continue; }
+          const platformType = defaults.platformType;
+          const enclosure = defaults.enclosure;
+          if (platformType === undefined || enclosure === undefined) {
+            skippedNoMatch++;
+            warnings.push(`Create skipped for ${a.serialNumber} — new_endpoint_defaults.platformType/enclosure required.`);
+            continue;
+          }
+          const nowIso = new Date().toISOString();
+          const body: Record<string, unknown> = {
+            companyId: Number(companyId),
+            name: a.name || a.serialNumber,
+            serialNumber: a.serialNumber,
+            manufacturer: a.manufacturer ?? undefined,
+            model: a.model ?? undefined,
+            expirationDate: normalizeDate(a.warrantyExpiry) ?? undefined,
+            manufacturedDate: normalizeDate(a.purchaseDate) ?? undefined,
+            os: a.os ?? undefined,
+            osVersion: a.osVersion ?? undefined,
+            tagNumber: "ScalePad",
+            platformType: Number(platformType),
+            enclosure: Number(enclosure),
+            isWindowsDefenderRunning: false,
+            lastOSUpdate: nowIso,
+            lastCheckIn: nowIso,
+          };
+          planCreate.push({ serial: a.serialNumber, name: String(body.name) });
+          if (apply) {
+            try {
+              await callApi("POST", "/v2/endpoint", undefined, body);
+              created++;
+            } catch (err) {
+              errors++;
+              warnings.push(`POST ${a.serialNumber}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+          }
+        }
+      }
+
+      return {
+        mode: apply ? "apply" : "plan",
+        companyId,
+        scalePadClientId: clientId,
+        scalePadAssets: assets.length,
+        cloudRadialEndpoints: epCount,
+        endpoints: {
+          updated: apply ? updated : undefined,
+          created: apply ? created : undefined,
+          toUpdate: planUpdate.length,
+          toCreate: planCreate.length,
+          skippedNoSerial,
+          skippedNoChange,
+          skippedNoMatch,
+          errors: apply ? errors : undefined,
+        },
+        planUpdate: planUpdate.slice(0, 200),
+        planCreate: planCreate.slice(0, 200),
+        warnings,
+        note: apply
+          ? undefined
+          : "Nothing was written. Re-run with apply=true to make these changes.",
+      };
     },
   },
 
